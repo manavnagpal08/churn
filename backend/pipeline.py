@@ -167,9 +167,13 @@ class ChurnMLPipeline:
         model.fit(self.X_train_proc, self.y_train)
         self.model = model
         
-        # Save fitted model & preprocessor to artifacts
-        artifact_path = os.path.join(ARTIFACTS_DIR, f"dt_model_{criterion}.joblib")
-        joblib.dump({"model": model, "preprocessor": self.preprocessor, "config": self.current_config}, artifact_path)
+        # Save fitted model & preprocessor to artifacts (safe against read-only serverless filesystems)
+        try:
+            artifact_path = os.path.join(ARTIFACTS_DIR, f"dt_model_{criterion}.joblib")
+            os.makedirs(os.path.dirname(artifact_path), exist_ok=True)
+            joblib.dump({"model": model, "preprocessor": self.preprocessor, "config": self.current_config}, artifact_path)
+        except Exception as save_err:
+            print(f"[Pipeline] Notice: Artifact caching skipped in read-only environment: {save_err}")
         
         # Evaluate performance on test and train
         evaluation = self._evaluate_model(model)
