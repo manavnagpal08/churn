@@ -8,7 +8,7 @@ frontend/dist/
 .env
 .env.*
 !.env.example
-Telco_customer_churn.xlsx
+/Telco_customer_churn.xlsx
 test_application.py
 train_preprocessed.py
 benchmark_predictors.py
