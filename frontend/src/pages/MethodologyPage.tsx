@@ -1,194 +1,21 @@
 import React from 'react';
-import {
-  BookOpen,
-  GraduationCap,
-  Database,
-  GitBranch,
-  ShieldAlert,
-  Binary,
-  Layers,
-  CheckCircle2,
-  AlertCircle,
-  Cpu,
-  Calculator
-} from 'lucide-react';
-
-export const MethodologyPage: React.FC = () => {
-  return (
-    <div className="max-w-4xl mx-auto space-y-12 pb-20 pt-4">
-      {/* Title */}
-      <div className="border-b border-appBorder pb-6 space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-softIvory border border-appBorder rounded-full text-xs font-mono font-bold text-nearBlack">
-          <GraduationCap className="w-3.5 h-3.5 text-accentYellow" />
-          Academic Microproject Documentation • Semester 5 Data Mining & Data Warehousing
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-nearBlack tracking-tight">
-          Methodology & Project Architecture
-        </h1>
-        <p className="text-sm text-mutedText font-mono">
-          Title: Customer Churn Prediction & Intelligence using Decision Tree Induction (CART)
-        </p>
-      </div>
-
-      {/* 1. Problem Statement & Objectives */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-nearBlack border-b border-appBorder pb-2">
-          <span className="font-mono font-bold text-sm text-accentRed">01.</span>
-          <h2 className="text-lg font-bold uppercase tracking-wide">Problem Statement & Objectives</h2>
-        </div>
-        <p className="text-xs sm:text-sm text-mutedText leading-relaxed">
-          Customer attrition (churn) presents a substantial financial vulnerability in telecommunications due to high customer acquisition costs compared to subscription maintenance costs. The objective of this academic microproject is to construct an interpretable, transparent machine learning framework utilizing <strong>Decision Tree Induction</strong> to identify at-risk subscribers, extract explicit decision rules, and uncover behavioral patterns from historical telecom records.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2">
-          <div className="bg-softIvory border border-appBorder p-4 rounded-lg space-y-1">
-            <strong className="text-nearBlack block font-mono">Primary Objective:</strong>
-            <span>Construct and evaluate a CART Decision Tree classifier that predicts subscriber churn without black-box opacity.</span>
-          </div>
-          <div className="bg-softIvory border border-appBorder p-4 rounded-lg space-y-1">
-            <strong className="text-nearBlack block font-mono">Interpretability Objective:</strong>
-            <span>Trace exact Boolean decision paths through tree nodes to reveal actionable thresholds (e.g. tenure and contract milestones).</span>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. Dataset Specification & Leakage Prevention */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-nearBlack border-b border-appBorder pb-2">
-          <span className="font-mono font-bold text-sm text-accentRed">02.</span>
-          <h2 className="text-lg font-bold uppercase tracking-wide">Dataset Specification & Leakage Prevention</h2>
-        </div>
-        <p className="text-xs sm:text-sm text-mutedText leading-relaxed">
-          The project utilizes the actual workspace dataset <code>Telco_customer_churn.xlsx</code> consisting of <strong>7,043 customer records</strong> and 33 original columns.
-        </p>
-
-        <div className="bg-warmWhite border border-appBorder rounded-lg p-5 space-y-3 text-xs">
-          <h3 className="font-bold text-nearBlack font-mono uppercase text-[11px]">Leakage-Prone and Metadata Columns Excluded:</h3>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-mutedText">
-            <li className="flex items-start gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accentRed mt-1 shrink-0"></span>
-              <span><strong>CustomerID:</strong> Unique arbitrary identifier.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accentRed mt-1 shrink-0"></span>
-              <span><strong>Count, Country, State:</strong> Single-value constants.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accentRed mt-1 shrink-0"></span>
-              <span><strong>City, Zip Code, Lat Long:</strong> High-cardinality spatial coordinates.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accentRed mt-1 shrink-0"></span>
-              <span><strong>Churn Value:</strong> Direct numeric encoding of target label.</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accentRed mt-1 shrink-0"></span>
-              <span><strong>Churn Score:</strong> Post-churn predictive score (data leakage).</span>
-            </li>
-            <li className="flex items-start gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-accentRed mt-1 shrink-0"></span>
-              <span><strong>Churn Reason:</strong> Populated only after churn has occurred (pure leakage).</span>
-            </li>
-          </ul>
-
-          <div className="pt-2 border-t border-appBorder text-[11px] text-mutedText">
-            <strong>Numeric Data Cleaning:</strong> Exactly 11 records in <code>Total Charges</code> had whitespace strings corresponding to customers with <code>Tenure Months == 0</code>. These were safely coerced to 0.0 rather than dropping rows.
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Decision Tree Induction & Mathematics */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-nearBlack border-b border-appBorder pb-2">
-          <span className="font-mono font-bold text-sm text-accentRed">03.</span>
-          <h2 className="text-lg font-bold uppercase tracking-wide">Mathematical Formulations: CART, Gini & Entropy</h2>
-        </div>
-        <p className="text-xs sm:text-sm text-mutedText leading-relaxed">
-          The model strictly implements the <strong>CART (Classification and Regression Trees)</strong> algorithm via <code>sklearn.tree.DecisionTreeClassifier</code>. The tree performs greedy recursive binary splitting: at each node, it evaluates all possible split points across all features to maximize the reduction in node impurity.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-          <div className="bg-softIvory border border-appBorder p-4 rounded-lg space-y-2">
-            <strong className="text-nearBlack block text-sm">Gini Impurity (CART Default)</strong>
-            <p className="text-mutedText font-sans">
-              Measures the probability of misclassifying a randomly chosen element from the set if it were randomly labeled according to the class distribution.
-            </p>
-            <div className="bg-warmWhite border border-appBorder p-2.5 rounded font-bold text-center text-nearBlack">
-              G(D) = 1 - &sum;<sub>i=1</sub><sup>k</sup> p<sub>i</sub><sup>2</sup>
-            </div>
-            <p className="text-[10px] text-mutedText font-sans">
-              For binary churn classification, maximum Gini impurity is 0.50 (pure 50/50 mix) and minimum is 0.0 (pure node).
-            </p>
-          </div>
-
-          <div className="bg-softIvory border border-appBorder p-4 rounded-lg space-y-2">
-            <strong className="text-nearBlack block text-sm">Entropy & Information Gain</strong>
-            <p className="text-mutedText font-sans">
-              Measures the average information or unpredictability inherent in the distribution (Shannon entropy).
-            </p>
-            <div className="bg-warmWhite border border-appBorder p-2.5 rounded font-bold text-center text-nearBlack">
-              H(D) = - &sum;<sub>i=1</sub><sup>k</sup> p<sub>i</sub> log<sub>2</sub>(p<sub>i</sub>)
-            </div>
-            <p className="text-[10px] text-mutedText font-sans">
-              Information Gain measures the reduction in entropy achieved by partitioning dataset D according to split condition A: IG(D, A) = H(D) - H(D|A).
-            </p>
-          </div>
-        </div>
-
-        {/* Academic Clarification: CART Entropy vs Textbook ID3 */}
-        <div className="bg-warmWhite border-l-4 border-l-nearBlack border border-appBorder p-4 rounded-r-lg text-xs text-mutedText leading-relaxed space-y-2">
-          <strong className="text-nearBlack flex items-center gap-1.5 font-mono">
-            <Binary className="w-4 h-4 text-nearBlack" />
-            Clarification on ID3 vs Scikit-Learn's Entropy Criterion:
-          </strong>
-          <p>
-            In machine learning literature, the classic <strong>ID3 algorithm</strong> (Quinlan, 1986) creates multi-way splits for categorical variables and does not natively support continuous numeric variables or pruning.
-          </p>
-          <p>
-            Scikit-learn’s implementation is an optimized version of <strong>CART</strong> that supports both the Gini impurity and Shannon entropy criteria. While using <code>criterion="entropy"</code> measures Information Gain, the tree construction remains binary and handles numeric features via threshold cuts. We explicitly do not claim that scikit-learn is a textbook ID3 implementation.
-          </p>
-        </div>
-      </section>
-
-      {/* 4. Validation Protocol & Generalization */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-nearBlack border-b border-appBorder pb-2">
-          <span className="font-mono font-bold text-sm text-accentRed">04.</span>
-          <h2 className="text-lg font-bold uppercase tracking-wide">Validation Protocol & Overfitting Control</h2>
-        </div>
-        <p className="text-xs sm:text-sm text-mutedText leading-relaxed">
-          To prevent data snooping and data leakage:
-        </p>
-        <ul className="list-disc pl-5 text-xs text-mutedText space-y-1.5 leading-relaxed">
-          <li>
-            <strong>Stratified 80/20 Train-Test Split:</strong> The dataset is partitioned with a fixed seed (<code>random_state=42</code>) preserving the 26.5% churn ratio in both partitions (5,634 train samples, 1,409 held-out test samples).
-          </li>
-          <li>
-            <strong>Preprocessing Pipeline:</strong> One-hot encoding and scalers are fitted strictly on <code>X_train</code> and applied downstream to <code>X_test</code>.
-          </li>
-          <li>
-            <strong>Overfitting Controls:</strong> Unconstrained decision trees tend to memorize training noise, reaching 100% training accuracy with poor test generalization. CHURN//ZERO implements <code>max_depth</code>, <code>min_samples_leaf</code>, and cost-complexity pruning (<code>ccp_alpha</code>) to produce parsimonious trees that generalize effectively.
-          </li>
-        </ul>
-      </section>
-
-      {/* 5. Limitations & Academic Integrity */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-nearBlack border-b border-appBorder pb-2">
-          <span className="font-mono font-bold text-sm text-accentRed">05.</span>
-          <h2 className="text-lg font-bold uppercase tracking-wide">Limitations & Epistemic Boundaries</h2>
-        </div>
-        <div className="bg-softIvory border border-appBorder rounded-lg p-5 space-y-3 text-xs text-mutedText leading-relaxed">
-          <p>
-            1. <strong>Historical Boundary:</strong> The findings reflect telecom customer dynamics within the provided California dataset. Generalization to other geographies or subscription verticals cannot be guaranteed without re-fitting.
-          </p>
-          <p>
-            2. <strong>Empirical vs Future Certainty:</strong> Test accuracy (~79.4%) and ROC-AUC (~0.83) measure predictive correlation in held-out data. Prediction outputs must be interpreted as statistical risk assessments, not deterministic forecasts.
-          </p>
-          <p>
-            3. <strong>Algorithmic Constraint:</strong> By user requirement, no ensemble algorithms (Random Forest, XGBoost) or neural networks were employed. While ensembles might yield slightly higher ROC-AUC, single CART Decision Trees provide complete, audit-ready interpretability essential for regulatory compliance and academic instruction.
-          </p>
-        </div>
-      </section>
-    </div>
-  );
+import { ArrowUpRight, Database, GitBranch, Layers, ShieldCheck } from 'lucide-react';
+import type { ModelEvaluation } from '../types';
+export const MethodologyPage: React.FC<{evaluation: ModelEvaluation | null}> = ({evaluation}) => {
+  const report=evaluation?.predictor_report;
+  const steps=[
+    {icon:Database, title:'Use the historical source data', text:'The Telco workbook contains 7,043 historical customer records. Prediction uses 16 categorical and three numeric account, service, and billing features.'},
+    {icon:ShieldCheck, title:'Keep outcome information out', text:'Customer identifiers, location metadata, churn scores, churn reasons, churn values, CLTV, and the target label are excluded from predictive features.'},
+    {icon:Layers, title:'Compare on training folds', text:`A fixed stratified split assigns 5,634 rows to training and 1,409 to testing, with seed 42. ${report?.candidates.length ?? 'The evaluated'} candidate configurations are compared with five-fold training cross-validation. Preprocessing is fitted inside each fold.`},
+    {icon:GitBranch, title:'Explain the actual fitted model', text:'The active predictor supplies every single, batch, and exported score. Its explanation comes from that same model. The CART reference tree remains independently inspectable.'},
+  ];
+  return <div className="methodology-page">
+    <div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line"/> THE METHOD BEHIND THE MODEL</div><h1>Clear methods.<br/><em>Honest boundaries.</em></h1><p>How the workspace prepares data, selects a prediction model, and presents evidence. Built for the Semester 5 Data Mining & Data Warehousing project.</p></div></div>
+    <div className="method-steps">{steps.map(({icon:Icon,title,text},index) => <section className="workspace-card" key={title}><div className="method-step-top"><Icon size={23}/><span>0{index+1}</span></div><h2>{title}</h2><p>{text}</p></section>)}</div>
+    <section className="workspace-card"><div className="eyebrow">MODEL SELECTION</div><h2>A stronger predictor, with a visible reference.</h2><p>The latest experiment compares raw and engineered inputs with logistic regression, gradient boosting, and CatBoost. The earlier benchmark also examined random forest, XGBoost, and CART. The selection rule uses mean cross-validation accuracy on training records, then F1 as a tie-breaker. Test labels do not participate in candidate selection.</p><p>The current selected predictor is <strong>{report?.selected.algorithm.replaceAll('_',' ') || evaluation?.model_name || 'shown in the Evaluation Lab'}</strong>. The reference tree uses CART with configurable Gini or entropy splits. Changing reference-tree hyperparameters does not change the selected predictor. Hosted selections apply only to your browser session; reference-tree retraining is available locally. You can explicitly switch the active predictor in the Evaluation Lab.</p><p>The test cohort is the same fixed split used in earlier project experiments. Its results are useful comparative measurements, but not a fresh external validation. Repeated experimentation can make a reported score optimistic; deployment decisions need a new representative cohort.</p><a className="text-button" href="#model-evaluation">Inspect measured model results <ArrowUpRight size={16}/></a></section>
+    <section className="workspace-card"><div className="eyebrow">EXPLANATIONS</div><h2>Different models need different explanations.</h2><p><strong>CART:</strong> the prediction panel lists the exact fitted rules and terminal leaf. Node class counts and probabilities come from the tree's training cohort.</p><p><strong>Gradient boosting:</strong> the panel aggregates the change in each weak tree's output along its path, grouped by original customer feature. A fitted baseline score plus every feature contribution reconstructs the ensemble's raw prediction score. These are path-difference attributions, not SHAP values.</p><p><strong>Logistic regression:</strong> each standardized feature value times its fitted coefficient contributes exactly to the log-odds score. The intercept is the baseline.</p><p><strong>CatBoost and XGBoost:</strong> native TreeSHAP contributions reconstruct the raw prediction margin. The interface identifies the explanation method. No reference-tree path is presented as an ensemble explanation.</p><p>For logistic and boosted classification, score contributions are in log-odds units. They are not percentage-point changes in probability, and they do not establish causal effects. The service checks numerical reconstruction before returning the explanation.</p></section>
+    <div className="method-formulas"><section className="workspace-card"><div className="eyebrow">REFERENCE TREE · GINI</div><h2>Measure the class mixture.</h2><div className="formula">G(D) = 1 − Σ pᵢ²</div><p>Gini impurity is zero for a pure node and reaches 0.5 for an even binary mixture. CART selects binary splits that reduce weighted impurity.</p></section><section className="workspace-card"><div className="eyebrow">REFERENCE TREE · ENTROPY</div><h2>Measure uncertainty.</h2><div className="formula">H(D) = −Σ pᵢ log₂(pᵢ)</div><p>Information gain is the reduction in weighted entropy after a split. Scikit-learn's entropy tree remains binary CART; it is not a textbook multiway ID3 implementation.</p></section></div>
+    <section className="workspace-card"><div className="eyebrow">RISK AND DECISION RULES</div><h2>Operational bands stay consistent.</h2><div className="risk-band-grid"><div><span>Low risk</span><strong>&lt; 30%</strong></div><div><span>Moderate risk</span><strong>30% to &lt; 60%</strong></div><div><span>High risk</span><strong>≥ 60%</strong></div></div><p>These are product-defined risk bands. They are separate from the classifier's predicted label. The model estimates churn probability; it does not guarantee a future outcome. Probabilities have not been separately calibrated in this experiment.</p><p>The preprocessing audit found 11 blank total charges and no duplicate customer IDs. Safe account and billing features are derived from pre-outcome inputs. Numeric imputation and linear-model scaling are fitted only on each training fold.</p><p>Missing total charges can be estimated as tenure × monthly charges. A supplied zero remains zero. Invalid categories, negative or nonfinite billing values, and inconsistent service combinations are rejected.</p></section>
+    <section className="workspace-card"><div className="eyebrow">LIMITATIONS AND ACCESS</div><h2>What this evidence does not establish.</h2><p>Historical correlations do not prove which intervention will retain a customer. Feature importance measures fitted-model behavior, not customer intent or causal influence. The dataset comes from one historical telecom context; other populations require validation.</p><p>Uploaded records are scored in memory and are not added to the historical source dataset. The model administrator token protects model changes. Access to customer data still requires the deployment's authenticated HTTPS gateway. This project does not claim regulatory certification or a production monitoring service.</p><p>Training guidance: <a className="underline" href="https://github.com/K-Dense-AI/scientific-agent-skills/blob/main/skills/scikit-learn/SKILL.md" target="_blank" rel="noreferrer">scikit-learn training skill</a>, <a className="underline" href="https://catboost.ai/docs/en/concepts/parameter-tuning" target="_blank" rel="noreferrer">CatBoost tuning</a>, <a className="underline" href="https://scikit-learn.org/stable/modules/ensemble.html" target="_blank" rel="noreferrer">scikit-learn ensemble methods</a>, <a className="underline" href="https://scikit-learn.org/stable/common_pitfalls.html" target="_blank" rel="noreferrer">data leakage and evaluation</a>, and <a className="underline" href="https://xgboost.readthedocs.io/en/stable/prediction.html" target="_blank" rel="noreferrer">XGBoost prediction documentation</a>.</p></section>
+  </div>;
 };

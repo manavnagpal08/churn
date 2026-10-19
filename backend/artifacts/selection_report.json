@@ -1,0 +1,32 @@
+{
+  "dataset_sha256": "1bcbc0ccc9b352175216979102628e579cfbde2c3ff57b005de168a433122640",
+  "selected_config": {
+    "ccp_alpha": 0.0,
+    "criterion": "entropy",
+    "max_depth": 7,
+    "min_samples_leaf": 80
+  },
+  "selection_metric": "accuracy",
+  "folds": 5,
+  "candidates": 144,
+  "baseline_cv_accuracy": 0.7923350790621291,
+  "selected_cv_accuracy": 0.7990795916791305,
+  "selected_cv_std": 0.013821057698396007,
+  "protocol": "80/20 stratified split, seed 42. Preprocessing fitted within each training fold. Test set excluded from selection.",
+  "candidate_test_metrics": {
+    "accuracy": 0.7899,
+    "precision": 0.6266,
+    "recall": 0.516,
+    "f1": 0.566,
+    "roc_auc": 0.8404,
+    "samples": 1409
+  },
+  "baseline_test_metrics": {
+    "accuracy": 0.7935,
+    "precision": 0.6708,
+    "recall": 0.4358,
+    "f1": 0.5284,
+    "roc_auc": 0.8316,
+    "samples": 1409
+  }
+}

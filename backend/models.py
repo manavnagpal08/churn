@@ -1,7 +1,11 @@
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field, model_validator, ConfigDict
+from typing import List, Dict, Any, Optional, Literal
+
+YES_NO_FIELDS = ('Senior_Citizen', 'Partner', 'Dependents', 'Paperless_Billing', 'Phone_Service')
+INTERNET_FIELDS = ('Online_Security', 'Online_Backup', 'Device_Protection', 'Tech_Support', 'Streaming_TV', 'Streaming_Movies')
 
 class CustomerInput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, allow_inf_nan=False)
     # Customer profile
     Gender: str = Field(default="Female", description="Customer gender: Female or Male")
     Senior_Citizen: str = Field(default="No", alias="Senior Citizen", description="Senior Citizen: Yes or No")
@@ -26,14 +30,31 @@ class CustomerInput(BaseModel):
     
     # Billing and payment
     Payment_Method: str = Field(default="Electronic check", alias="Payment Method", description="Payment Method: Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic)")
-    Monthly_Charges: float = Field(default=70.0, alias="Monthly Charges", ge=0.0, description="Monthly charges in USD")
-    Total_Charges: Optional[float] = Field(default=None, alias="Total Charges", description="Total charges in USD (auto-computed as Monthly * Tenure if omitted)")
+    Monthly_Charges: float = Field(default=70.0, alias="Monthly Charges", ge=0.0, le=100000, description="Monthly charges in USD")
+    Total_Charges: Optional[float] = Field(default=None, ge=0, le=1000000000, alias="Total Charges", description="Total charges in USD (auto-computed as Monthly * Tenure if omitted)")
 
-    class Config:
-        populate_by_name = True
+    @model_validator(mode='after')
+    def validate_categories(self):
+        choices = {**{name: {'Yes', 'No'} for name in YES_NO_FIELDS},
+                   **{name: {'Yes', 'No', 'No internet service'} for name in INTERNET_FIELDS},
+                   'Gender': {'Female', 'Male'},
+                   'Multiple_Lines': {'Yes', 'No', 'No phone service'},
+                   'Internet_Service': {'DSL', 'Fiber optic', 'No'},
+                   'Contract': {'Month-to-month', 'One year', 'Two year'},
+                   'Payment_Method': {'Electronic check', 'Mailed check', 'Bank transfer (automatic)', 'Credit card (automatic)'}}
+        for name, allowed in choices.items():
+            if getattr(self, name) not in allowed:
+                raise ValueError(f'{name.replace("_", " ")}: choose one of {", ".join(sorted(allowed))}')
+        if (self.Phone_Service == 'No') != (self.Multiple_Lines == 'No phone service'):
+            raise ValueError('Multiple Lines must be No phone service exactly when Phone Service is No.')
+        for name in INTERNET_FIELDS:
+            if (self.Internet_Service == 'No') != (getattr(self, name) == 'No internet service'):
+                raise ValueError(f'{name.replace("_", " ")}: select No internet service exactly when Internet Service is No.')
+        return self
 
 class ModelTrainConfig(BaseModel):
-    criterion: str = Field(default="gini", description="Split criterion: gini or entropy")
+    model_config = ConfigDict(allow_inf_nan=False)
+    criterion: Literal['gini', 'entropy'] = Field(default="gini", description="Split criterion: gini or entropy")
     max_depth: Optional[int] = Field(default=5, ge=1, le=20, description="Max tree depth")
     min_samples_leaf: int = Field(default=20, ge=1, le=500, description="Minimum samples per leaf")
     ccp_alpha: float = Field(default=0.0, ge=0.0, le=0.1, description="Complexity pruning alpha parameter")
@@ -50,6 +71,9 @@ class DecisionPathStep(BaseModel):
     churn_probability: float
     is_leaf: bool
 
+class PredictorSelectConfig(BaseModel):
+    algorithm: Literal['decision_tree', 'gradient_boosting', 'random_forest', 'xgboost', 'catboost', 'logistic_regression']
+
 class PredictionResponse(BaseModel):
     prediction: str # "Likely to churn" / "Not likely to churn"
     churn_label: int # 1 or 0
@@ -61,6 +85,14 @@ class PredictionResponse(BaseModel):
     model_criterion: str
     model_max_depth: Optional[int]
     timestamp: str
+    algorithm: str = 'decision_tree'
+    model_name: str = 'CART decision tree'
+    explanation_method: str = 'exact_tree_path'
+    feature_contributions: List[Dict[str, Any]] = Field(default_factory=list)
+    baseline_score: Optional[float] = None
+    prediction_score: Optional[float] = None
+    baseline_probability: Optional[float] = None
+    contribution_units: Optional[str] = None
 
 class BatchPredictionResponse(BaseModel):
     total_records: int
@@ -68,3 +100,4 @@ class BatchPredictionResponse(BaseModel):
     retained_count: int
     predicted_churn_rate: float
     predictions: List[Dict[str, Any]]
+    model_name: str = 'CART decision tree'

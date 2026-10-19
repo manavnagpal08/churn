@@ -1,22 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CustomerRecord, PortfolioResponse } from '../types';
-import { fetchPortfolioCustomers, uploadAndPredictBatch, getExportUrl } from '../services/api';
-import {
-  Users,
-  Search,
-  Filter,
-  Download,
-  Upload,
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  AlertTriangle,
-  CheckCircle2,
-  FileSpreadsheet,
-  Info
-} from 'lucide-react';
+import {CustomerRecord} from '../types';
+import {fetchPortfolioCustomers, uploadAndPredictBatch, getExportUrl, getTemplateUrl} from '../services/api';
+import {Search, Download, Upload, ArrowUpDown, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2} from 'lucide-react';
 
-export const CustomerPortfolio: React.FC = () => {
+export const CustomerPortfolio: React.FC<{hosted?: boolean}> = ({hosted=false}) => {
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
@@ -24,6 +11,9 @@ export const CustomerPortfolio: React.FC = () => {
   const [pageSize, setPageSize] = useState<number>(15);
 
   const [search, setSearch] = useState<string>('');
+  const [submittedSearch, setSubmittedSearch] = useState('');
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   const [contractFilter, setContractFilter] = useState<string>('All');
   const [churnFilter, setChurnFilter] = useState<string>('All');
   const [sortBy, setSortBy] = useState<string>('CustomerID');
@@ -35,35 +25,35 @@ export const CustomerPortfolio: React.FC = () => {
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadCustomers();
-  }, [page, pageSize, contractFilter, churnFilter, sortBy, sortDir]);
+    let active = true;
+    // eslint-disable-next-line react/set-state-in-effect -- Synchronize loading state with an external API query.
+    setLoading(true); setLoadError(null);
+    fetchPortfolioCustomers({page, pageSize, search: submittedSearch, contract: contractFilter,
+      churnFilter, sortBy, sortDir}).then(res => {
+        if (!active) return;
+        setCustomers(res.customers); setTotalCount(res.total_count); setTotalPages(res.total_pages);
+      }).catch(failure => { if (active) setLoadError(failure.message || 'Unable to load customers.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [page, pageSize, contractFilter, churnFilter, sortBy, sortDir, submittedSearch, retry]);
 
-  const loadCustomers = async () => {
-    try {
-      setLoading(true);
-      const res = await fetchPortfolioCustomers({
-        page,
-        pageSize,
-        search,
-        contract: contractFilter,
-        churnFilter,
-        sortBy,
-        sortDir
-      });
-      setCustomers(res.customers);
-      setTotalCount(res.total_count);
-      setTotalPages(res.total_pages);
-    } catch (err) {
-      console.error('Error loading portfolio customers:', err);
-    } finally {
-      setLoading(false);
-    }
+  const handleSearchSubmit = (event: React.FormEvent) => {
+    event.preventDefault(); setPage(1); setSubmittedSearch(search.trim());
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPage(1);
-    loadCustomers();
+  const downloadBatch = () => {
+    if (!uploadResult?.predictions?.length) return;
+    const columns = Object.keys(uploadResult.predictions[0]);
+    const escape = (value: unknown) => {
+      let text = String(value ?? '');
+      if (/^\s*[=+@-]/.test(text)) text = "'" + text;
+      return '"' + text.replaceAll('"', '""') + '"';
+    };
+    const csv = [columns, ...uploadResult.predictions.map((record: Record<string, unknown>) => columns.map(key => record[key]))]
+      .map(row => row.map(escape).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8'}));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'churn_zero_batch_predictions.csv';
+    anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handleSortToggle = (column: string) => {
@@ -106,18 +96,20 @@ export const CustomerPortfolio: React.FC = () => {
             Customer Portfolio &amp; Batch Inference
           </h1>
           <p className="text-xs sm:text-sm text-mutedText mt-1">
-            Audit 7,043 actual Telco customer profiles or upload a candidate cohort for automated Decision Tree scoring.
+            Browse historical customer records or score a CSV/XLSX cohort. Uploads: up to {hosted ? 4 : 10} MB and 10,000 rows.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <a className="text-xs underline" href={getTemplateUrl()}>Download input template</a>
           {/* File Upload Trigger */}
-          <label className="flex items-center gap-2 px-3.5 py-2 bg-warmWhite border border-appBorder rounded-md text-xs font-mono font-bold text-nearBlack hover:bg-softIvory cursor-pointer transition-colors">
+          <label tabIndex={0} role="button" onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.currentTarget.querySelector('input')?.click(); } }} className="flex items-center gap-2 px-3.5 py-2 bg-warmWhite border border-appBorder rounded-md text-xs font-mono font-bold text-nearBlack hover:bg-softIvory cursor-pointer transition-colors">
             <Upload className="w-3.5 h-3.5 text-accentYellow" />
-            <span>Upload Batch CSV/Excel</span>
+            <span>Upload CSV / XLSX</span>
             <input
               type="file"
-              accept=".csv,.xlsx,.xls"
+              accept=".csv,.xlsx"
+              disabled={uploadLoading}
               className="hidden"
               onChange={handleFileUpload}
             />
@@ -125,7 +117,7 @@ export const CustomerPortfolio: React.FC = () => {
 
           {/* Export CSV Button */}
           <a
-            href={getExportUrl(contractFilter, churnFilter)}
+            href={getExportUrl(contractFilter, churnFilter, submittedSearch, sortBy, sortDir)}
             className="flex items-center gap-2 px-3.5 py-2 bg-accentYellow text-nearBlack rounded-md text-xs font-mono font-bold hover:bg-yellow-400 transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
@@ -138,7 +130,7 @@ export const CustomerPortfolio: React.FC = () => {
       {uploadLoading && (
         <div className="p-4 bg-softIvory border border-appBorder rounded-lg flex items-center gap-3 text-xs font-mono text-nearBlack">
           <span className="w-4 h-4 border-2 border-nearBlack border-t-transparent rounded-full animate-spin"></span>
-          <span>Validating schema and scoring batch cohort through trained Decision Tree...</span>
+          <span>Validating inputs and scoring records with the active prediction model…</span>
         </div>
       )}
 
@@ -171,7 +163,7 @@ export const CustomerPortfolio: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 text-xs font-mono">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
             <div className="bg-warmWhite border border-appBorder p-3 rounded">
               <span className="text-mutedText block text-[10px]">Predicted Churn Count</span>
               <span className="text-lg font-bold text-accentRed">{uploadResult.churn_count}</span>
@@ -188,6 +180,11 @@ export const CustomerPortfolio: React.FC = () => {
         </div>
       )}
 
+      {uploadResult && <section className="bg-white border border-appBorder rounded-lg p-4 space-y-4">
+        <div className="flex flex-wrap justify-between gap-3 items-center"><p className="text-xs text-mutedText">Scored with {uploadResult.model_name || 'the active model'}. Preview of {Math.min(10, uploadResult.total_records)} records. The download contains all {uploadResult.total_records} results.</p><button className="primary-button" onClick={downloadBatch}><Download size={15}/>Download batch results</button></div>
+        <div className="overflow-x-auto"><table className="w-full text-xs text-left"><thead><tr><th className="p-2">Customer ID</th><th className="p-2">Prediction</th><th className="p-2">Churn probability</th><th className="p-2">Risk tier</th></tr></thead><tbody>{uploadResult.predictions.slice(0, 10).map((row: Record<string, any>, index: number) => <tr key={index} className="border-t border-appBorder"><td className="p-2">{row.CustomerID}</td><td className="p-2">{row['Predicted Label']}</td><td className="p-2">{(row['Churn Probability'] * 100).toFixed(2)}%</td><td className="p-2">{row['Risk Tier']}</td></tr>)}</tbody></table></div>
+      </section>}
+      {loadError && <div role="alert" className="p-4 border border-accentRed/30 rounded-lg text-sm text-accentRed">{loadError} <button className="underline ml-3" onClick={() => setRetry(value => value + 1)}>Retry</button></div>}
       {/* Filter and Search Bar */}
       <div className="bg-warmWhite border border-appBorder rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4">
         {/* Search Input */}
@@ -195,6 +192,7 @@ export const CustomerPortfolio: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-mutedText" />
           <input
             type="text"
+            aria-label="Search customer ID, city or payment method"
             placeholder="Search Customer ID, City, Payment..."
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -207,6 +205,7 @@ export const CustomerPortfolio: React.FC = () => {
           <div className="flex items-center gap-2 text-xs">
             <span className="text-mutedText font-mono">Contract:</span>
             <select
+              aria-label="Contract filter"
               value={contractFilter}
               onChange={e => {
                 setContractFilter(e.target.value);
@@ -224,6 +223,7 @@ export const CustomerPortfolio: React.FC = () => {
           <div className="flex items-center gap-2 text-xs">
             <span className="text-mutedText font-mono">Historical Label:</span>
             <select
+              aria-label="Historical churn filter"
               value={churnFilter}
               onChange={e => {
                 setChurnFilter(e.target.value);
@@ -240,6 +240,7 @@ export const CustomerPortfolio: React.FC = () => {
           <div className="flex items-center gap-2 text-xs">
             <span className="text-mutedText font-mono">Rows:</span>
             <select
+              aria-label="Rows per page"
               value={pageSize}
               onChange={e => {
                 setPageSize(parseInt(e.target.value));
@@ -262,6 +263,9 @@ export const CustomerPortfolio: React.FC = () => {
             <thead>
               <tr className="border-b border-appBorder bg-softIvory/70 text-mutedText font-mono uppercase text-[10px]">
                 <th
+                  tabIndex={0}
+                  aria-sort={sortBy === 'CustomerID' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); handleSortToggle('CustomerID');} }}
                   onClick={() => handleSortToggle('CustomerID')}
                   className="py-3 px-4 font-bold cursor-pointer hover:text-nearBlack select-none"
                 >
@@ -272,6 +276,9 @@ export const CustomerPortfolio: React.FC = () => {
                 </th>
                 <th className="py-3 px-4 font-bold">Demographics</th>
                 <th
+                  tabIndex={0}
+                  aria-sort={sortBy === 'Tenure Months' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); handleSortToggle('Tenure Months');} }}
                   onClick={() => handleSortToggle('Tenure Months')}
                   className="py-3 px-4 font-bold cursor-pointer hover:text-nearBlack select-none"
                 >
@@ -283,6 +290,9 @@ export const CustomerPortfolio: React.FC = () => {
                 <th className="py-3 px-4 font-bold">Contract</th>
                 <th className="py-3 px-4 font-bold">Internet</th>
                 <th
+                  tabIndex={0}
+                  aria-sort={sortBy === 'Monthly Charges' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); handleSortToggle('Monthly Charges');} }}
                   onClick={() => handleSortToggle('Monthly Charges')}
                   className="py-3 px-4 font-bold cursor-pointer hover:text-nearBlack select-none"
                 >
@@ -347,13 +357,14 @@ export const CustomerPortfolio: React.FC = () => {
         {/* Pagination Bar */}
         <div className="p-4 border-t border-appBorder bg-softIvory/30 flex items-center justify-between text-xs font-mono">
           <span className="text-mutedText">
-            Showing {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalCount)} of {totalCount} subscribers
+            Showing {totalCount ? (page - 1) * pageSize + 1 : 0} - {Math.min(page * pageSize, totalCount)} of {totalCount} subscribers
           </span>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
+              aria-label="Previous page"
+              disabled={page === 1 || loading}
               className="p-1.5 rounded border border-appBorder hover:bg-softIvory disabled:opacity-40"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -363,7 +374,8 @@ export const CustomerPortfolio: React.FC = () => {
             </span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
+              aria-label="Next page"
+              disabled={page === totalPages || loading}
               className="p-1.5 rounded border border-appBorder hover:bg-softIvory disabled:opacity-40"
             >
               <ChevronRight className="w-4 h-4" />

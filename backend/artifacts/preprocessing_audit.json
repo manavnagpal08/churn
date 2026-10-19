@@ -1,0 +1,132 @@
+{
+  "dataset_sha256": "1bcbc0ccc9b352175216979102628e579cfbde2c3ff57b005de168a433122640",
+  "rows": 7043,
+  "columns": 33,
+  "customer_id_duplicates": 0,
+  "full_row_duplicates": 0,
+  "feature_duplicates": 40,
+  "missing_raw": {
+    "Churn Reason": 5174
+  },
+  "blank_total_charges": 11,
+  "numeric_ranges": {
+    "Tenure Months": {
+      "min": 0.0,
+      "max": 72.0,
+      "median": 29.0
+    },
+    "Monthly Charges": {
+      "min": 18.25,
+      "max": 118.75,
+      "median": 70.35
+    },
+    "Total Charges": {
+      "min": 0.0,
+      "max": 8684.8,
+      "median": 1394.55
+    }
+  },
+  "category_levels": {
+    "Gender": [
+      "Female",
+      "Male"
+    ],
+    "Senior Citizen": [
+      "No",
+      "Yes"
+    ],
+    "Partner": [
+      "No",
+      "Yes"
+    ],
+    "Dependents": [
+      "No",
+      "Yes"
+    ],
+    "Phone Service": [
+      "No",
+      "Yes"
+    ],
+    "Multiple Lines": [
+      "No",
+      "No phone service",
+      "Yes"
+    ],
+    "Internet Service": [
+      "DSL",
+      "Fiber optic",
+      "No"
+    ],
+    "Online Security": [
+      "No",
+      "No internet service",
+      "Yes"
+    ],
+    "Online Backup": [
+      "No",
+      "No internet service",
+      "Yes"
+    ],
+    "Device Protection": [
+      "No",
+      "No internet service",
+      "Yes"
+    ],
+    "Tech Support": [
+      "No",
+      "No internet service",
+      "Yes"
+    ],
+    "Streaming TV": [
+      "No",
+      "No internet service",
+      "Yes"
+    ],
+    "Streaming Movies": [
+      "No",
+      "No internet service",
+      "Yes"
+    ],
+    "Contract": [
+      "Month-to-month",
+      "One year",
+      "Two year"
+    ],
+    "Paperless Billing": [
+      "No",
+      "Yes"
+    ],
+    "Payment Method": [
+      "Bank transfer (automatic)",
+      "Credit card (automatic)",
+      "Electronic check",
+      "Mailed check"
+    ]
+  },
+  "excluded_columns": [
+    "CustomerID",
+    "Count",
+    "Country",
+    "State",
+    "City",
+    "Zip Code",
+    "Lat Long",
+    "Latitude",
+    "Longitude",
+    "Churn Value",
+    "Churn Score",
+    "Churn Reason",
+    "CLTV",
+    "Churn Label",
+    "Target"
+  ],
+  "class_counts": {
+    "0": 5174,
+    "1": 1869
+  },
+  "split": {
+    "training": 5634,
+    "test": 1409,
+    "overlap": 0
+  }
+}

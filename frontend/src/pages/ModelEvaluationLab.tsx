@@ -1,321 +1,58 @@
 import React, { useState } from 'react';
-import { ModelEvaluation } from '../types';
-import { trainModel } from '../services/api';
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine
-} from 'recharts';
-import {
-  FlaskConical,
-  Scale,
-  Sliders,
-  CheckCircle2,
-  AlertOctagon,
-  RefreshCw,
-  Info,
-  Layers,
-  ArrowRight
-} from 'lucide-react';
+import { ArrowUpRight, ChevronRight, FlaskConical, RefreshCw, Download } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import type { BenchmarkCandidate, ModelEvaluation } from '../types';
+import { selectPredictor, setAdminToken } from '../services/api';
 
-interface ModelEvaluationLabProps {
-  evaluation: ModelEvaluation | null;
-  onRetrainCompleted: (newEval: ModelEvaluation) => void;
-}
-
-export const ModelEvaluationLab: React.FC<ModelEvaluationLabProps> = ({
-  evaluation,
-  onRetrainCompleted
-}) => {
-  const [criterion, setCriterion] = useState<'gini' | 'entropy'>(
-    (evaluation?.config.criterion as 'gini' | 'entropy') || 'gini'
-  );
-  const [maxDepth, setMaxDepth] = useState<number>(evaluation?.config.max_depth || 5);
-  const [minSamplesLeaf, setMinSamplesLeaf] = useState<number>(
-    evaluation?.config.min_samples_leaf || 20
-  );
-  const [ccpAlpha, setCcpAlpha] = useState<number>(evaluation?.config.ccp_alpha || 0.0);
+interface Props { evaluation: ModelEvaluation | null; onRetrainCompleted: (evaluation: ModelEvaluation) => void; hosted?: boolean; }
+const modelNames: Record<string,string> = {decision_tree:'CART decision tree',gradient_boosting:'Gradient boosted trees',random_forest:'Random forest',xgboost:'XGBoost',catboost:'CatBoost',logistic_regression:'Logistic regression'};
+const percent = (value: number) => `${(value * 100).toFixed(2)}%`;
+export const ModelEvaluationLab: React.FC<Props> = ({evaluation, onRetrainCompleted, hosted = false}) => {
   const [loading, setLoading] = useState(false);
-
-  const trainMetrics = evaluation?.train_metrics;
-  const testMetrics = evaluation?.test_metrics;
-  const cm = evaluation?.confusion_matrix || { tn: 900, fp: 135, fn: 155, tp: 219, total: 1409 };
-  const rocPoints = evaluation?.roc_curve || [];
-
-  const handleRetrain = async () => {
-    try {
-      setLoading(true);
-      const res = await trainModel({
-        criterion,
-        max_depth: maxDepth,
-        min_samples_leaf: minSamplesLeaf,
-        ccp_alpha: ccpAlpha
-      });
-      onRetrainCompleted(res.evaluation);
-    } catch (err) {
-      console.error('Retrain error:', err);
-    } finally {
-      setLoading(false);
-    }
+  const [error, setError] = useState<string | null>(null);
+  if (!evaluation) return <p>Measured evaluation results are unavailable.</p>;
+  const report = evaluation.predictor_report;
+  const {test_metrics: test, train_metrics: train, confusion_matrix: matrix} = evaluation;
+  const active = evaluation.algorithm;
+  const options = report ? ['decision_tree', report.selected.algorithm].filter((value,index,all) => all.indexOf(value) === index) : ['decision_tree'];
+  const switchModel = async (algorithm: string) => {
+    setLoading(true); setError(null);
+    try { const result = await selectPredictor(algorithm); await onRetrainCompleted(result.evaluation); }
+    catch (failure) { setError(failure instanceof Error ? failure.message : 'Unable to change the prediction model.'); }
+    finally { setLoading(false); }
   };
-
-  const handleCriterionToggle = async (newCrit: 'gini' | 'entropy') => {
-    setCriterion(newCrit);
-    try {
-      setLoading(true);
-      const res = await trainModel({
-        criterion: newCrit,
-        max_depth: maxDepth,
-        min_samples_leaf: minSamplesLeaf,
-        ccp_alpha: ccpAlpha
-      });
-      onRetrainCompleted(res.evaluation);
-    } catch (err) {
-      console.error('Criterion switch error:', err);
-    } finally {
-      setLoading(false);
-    }
+  const bestByFamily = Object.values((report?.candidates || []).reduce<Record<string,BenchmarkCandidate>>((families, candidate) => {
+    if (!families[candidate.algorithm] || candidate.accuracy > families[candidate.algorithm].accuracy) families[candidate.algorithm] = candidate;
+    return families;
+  }, {})).sort((a,b) => b.accuracy-a.accuracy);
+  const improvement = report ? (report.test_metrics.accuracy - report.baseline_test_metrics.accuracy) * 100 : null;
+  const downloadReport = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(evaluation,null,2)],{type:'application/json'}));
+    const anchor = document.createElement('a'); anchor.href=url; anchor.download='churn-zero-model-evaluation.json'; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url),1000);
   };
-
-  return (
-    <div className="space-y-8 pb-16">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-appBorder pb-6">
-        <div>
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-nearBlack bg-softIvory border border-appBorder px-2.5 py-1 rounded">
-            Empirical Validation &amp; Diagnostics
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-nearBlack tracking-tight mt-2">
-            Model Evaluation &amp; Generalization
-          </h1>
-          <p className="text-xs sm:text-sm text-mutedText mt-1">
-            Auditing generalization fidelity on 1,409 held-out test customers (80/20 stratified split).
-          </p>
-        </div>
-
-        {/* Criterion Quick Switcher */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-mutedText">Active Criterion:</span>
-          <div className="flex rounded-md border border-appBorder bg-softIvory p-0.5">
-            <button
-              onClick={() => handleCriterionToggle('gini')}
-              className={`px-3 py-1.5 text-xs font-mono font-bold rounded transition-colors ${
-                criterion === 'gini' ? 'bg-nearBlack text-warmWhite' : 'text-mutedText hover:text-nearBlack'
-              }`}
-            >
-              CART (Gini)
-            </button>
-            <button
-              onClick={() => handleCriterionToggle('entropy')}
-              className={`px-3 py-1.5 text-xs font-mono font-bold rounded transition-colors ${
-                criterion === 'entropy' ? 'bg-nearBlack text-warmWhite' : 'text-mutedText hover:text-nearBlack'
-              }`}
-            >
-              Entropy (Info Gain)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary KPI Tiles (Held-out Test) */}
-      <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-warmWhite border border-appBorder p-5 rounded-lg space-y-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-mutedText">Test Accuracy</span>
-          <div className="text-3xl font-extrabold text-nearBlack font-mono tracking-tight">
-            {testMetrics ? (testMetrics.accuracy * 100).toFixed(2) : '--'}%
-          </div>
-          <p className="text-[11px] text-mutedText">Held-out cohort</p>
-        </div>
-
-        <div className="bg-warmWhite border border-appBorder p-5 rounded-lg space-y-1 border-l-4 border-l-accentYellow">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-nearBlack font-semibold">Test Recall</span>
-          <div className="text-3xl font-extrabold text-nearBlack font-mono tracking-tight">
-            {testMetrics ? (testMetrics.recall * 100).toFixed(2) : '--'}%
-          </div>
-          <p className="text-[11px] text-mutedText">Churn sensitivity</p>
-        </div>
-
-        <div className="bg-warmWhite border border-appBorder p-5 rounded-lg space-y-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-mutedText">Test Precision</span>
-          <div className="text-3xl font-extrabold text-nearBlack font-mono tracking-tight">
-            {testMetrics ? (testMetrics.precision * 100).toFixed(2) : '--'}%
-          </div>
-          <p className="text-[11px] text-mutedText">Positive predictive value</p>
-        </div>
-
-        <div className="bg-warmWhite border border-appBorder p-5 rounded-lg space-y-1">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-mutedText">Test F1-Score</span>
-          <div className="text-3xl font-extrabold text-nearBlack font-mono tracking-tight">
-            {testMetrics ? (testMetrics.f1 * 100).toFixed(2) : '--'}%
-          </div>
-          <p className="text-[11px] text-mutedText">Harmonic mean</p>
-        </div>
-
-        <div className="bg-warmWhite border border-appBorder p-5 rounded-lg space-y-1 bg-softIvory border-l-4 border-l-nearBlack">
-          <span className="text-[11px] font-mono uppercase tracking-wider text-nearBlack font-semibold">Test ROC-AUC</span>
-          <div className="text-3xl font-extrabold text-nearBlack font-mono tracking-tight">
-            {testMetrics ? testMetrics.roc_auc.toFixed(3) : '--'}
-          </div>
-          <p className="text-[11px] text-mutedText">Area under ROC curve</p>
-        </div>
-      </section>
-
-      {/* Train vs Test Comparison Table */}
-      <section className="bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
-        <div className="flex items-center justify-between border-b border-appBorder pb-3">
-          <div>
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-mutedText">Generalization Check</span>
-            <h3 className="text-base font-bold text-nearBlack">Training Cohort vs Held-Out Test Cohort Performance</h3>
-          </div>
-          <span className="text-xs font-mono text-mutedText">
-            Overfitting Gap: {testMetrics && trainMetrics ? ((trainMetrics.accuracy - testMetrics.accuracy) * 100).toFixed(2) : '0.00'}%
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="border-b border-appBorder text-mutedText font-mono uppercase text-[10px]">
-                <th className="py-2.5 px-4 font-bold">Partition</th>
-                <th className="py-2.5 px-4 font-bold">Samples</th>
-                <th className="py-2.5 px-4 font-bold">Accuracy</th>
-                <th className="py-2.5 px-4 font-bold">Precision</th>
-                <th className="py-2.5 px-4 font-bold">Recall</th>
-                <th className="py-2.5 px-4 font-bold">F1-Score</th>
-                <th className="py-2.5 px-4 font-bold">ROC-AUC</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-appBorder/50 font-mono">
-              <tr>
-                <td className="py-3 px-4 font-bold text-nearBlack">Training Data (80%)</td>
-                <td className="py-3 px-4">{trainMetrics?.samples}</td>
-                <td className="py-3 px-4 font-semibold">{trainMetrics ? (trainMetrics.accuracy * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4">{trainMetrics ? (trainMetrics.precision * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4">{trainMetrics ? (trainMetrics.recall * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4">{trainMetrics ? (trainMetrics.f1 * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4">{trainMetrics?.roc_auc.toFixed(3)}</td>
-              </tr>
-              <tr className="bg-softIvory">
-                <td className="py-3 px-4 font-bold text-nearBlack">Held-out Test (20%)</td>
-                <td className="py-3 px-4">{testMetrics?.samples}</td>
-                <td className="py-3 px-4 font-bold text-nearBlack">{testMetrics ? (testMetrics.accuracy * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4">{testMetrics ? (testMetrics.precision * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4 font-bold text-accentRed">{testMetrics ? (testMetrics.recall * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4">{testMetrics ? (testMetrics.f1 * 100).toFixed(2) : '--'}%</td>
-                <td className="py-3 px-4 font-bold text-nearBlack">{testMetrics?.roc_auc.toFixed(3)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Confusion Matrix & ROC Curve Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Confusion Matrix */}
-        <div className="lg:col-span-6 bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-appBorder pb-3">
-            <div>
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-mutedText">Binary Error Matrix</span>
-              <h3 className="text-base font-bold text-nearBlack">Held-out Test Confusion Matrix</h3>
-            </div>
-            <span className="text-xs font-mono text-mutedText">Total: {cm.total} test cases</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            {/* True Negative */}
-            <div className="bg-softIvory border border-appBorder rounded-lg p-4 space-y-1">
-              <div className="flex justify-between items-center text-xs font-mono">
-                <span className="text-mutedText uppercase text-[10px]">True Negatives (TN)</span>
-                <span className="text-emerald-700 font-bold">Retained Correctly</span>
-              </div>
-              <div className="text-3xl font-extrabold text-nearBlack font-mono">{cm.tn}</div>
-              <p className="text-[11px] text-mutedText">
-                Actual: Retained | Pred: Retained
-              </p>
-            </div>
-
-            {/* False Positive */}
-            <div className="bg-warmWhite border border-accentYellow/70 rounded-lg p-4 space-y-1">
-              <div className="flex justify-between items-center text-xs font-mono">
-                <span className="text-mutedText uppercase text-[10px]">False Positives (FP)</span>
-                <span className="text-yellow-800 font-bold">Type I Error</span>
-              </div>
-              <div className="text-3xl font-extrabold text-yellow-700 font-mono">{cm.fp}</div>
-              <p className="text-[11px] text-mutedText">
-                Actual: Retained | Pred: Churn
-              </p>
-            </div>
-
-            {/* False Negative */}
-            <div className="bg-warmWhite border border-accentRed/70 rounded-lg p-4 space-y-1">
-              <div className="flex justify-between items-center text-xs font-mono">
-                <span className="text-mutedText uppercase text-[10px]">False Negatives (FN)</span>
-                <span className="text-accentRed font-bold">Type II Error (Critical)</span>
-              </div>
-              <div className="text-3xl font-extrabold text-accentRed font-mono">{cm.fn}</div>
-              <p className="text-[11px] text-mutedText">
-                Actual: Churn | Pred: Retained
-              </p>
-            </div>
-
-            {/* True Positive */}
-            <div className="bg-softIvory border border-nearBlack rounded-lg p-4 space-y-1">
-              <div className="flex justify-between items-center text-xs font-mono">
-                <span className="text-mutedText uppercase text-[10px]">True Positives (TP)</span>
-                <span className="text-nearBlack font-bold">Churn Detected</span>
-              </div>
-              <div className="text-3xl font-extrabold text-nearBlack font-mono">{cm.tp}</div>
-              <p className="text-[11px] text-mutedText">
-                Actual: Churn | Pred: Churn
-              </p>
-            </div>
-          </div>
-
-          {/* Deep Academic Explanation of Recall vs Precision in Telecom */}
-          <div className="bg-softIvory border border-appBorder rounded p-4 text-xs text-mutedText leading-relaxed space-y-2">
-            <div className="flex items-center gap-1.5 font-bold text-nearBlack">
-              <AlertOctagon className="w-4 h-4 text-accentRed" />
-              <span>Why Recall is the Critical Metric in Customer Churn Prediction:</span>
-            </div>
-            <p>
-              In telecommunications, <strong>False Negatives ({cm.fn} missed churners)</strong> represent silent subscriber departures where no retention campaign is triggered, directly forfeiting customer lifetime value.
-            </p>
-            <p>
-              Conversely, <strong>False Positives ({cm.fp} retention offers to loyal subscribers)</strong> incur only minor promotional discounts. Maximizing Recall ensures telecom operators intercept the greatest possible fraction of at-risk subscribers.
-            </p>
-          </div>
-        </div>
-
-        {/* ROC Curve */}
-        <div className="lg:col-span-6 bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-appBorder pb-3">
-            <div>
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-mutedText">Discriminative Power</span>
-              <h3 className="text-base font-bold text-nearBlack">Receiver Operating Characteristic (ROC)</h3>
-            </div>
-            <span className="text-xs font-mono font-bold text-nearBlack bg-accentYellow/30 px-2 py-0.5 rounded">
-              AUC: {testMetrics?.roc_auc.toFixed(3)}
-            </span>
-          </div>
-
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rocPoints} margin={{ top: 10, right: 20, left: -20, bottom: 5 }}>
-                <XAxis dataKey="fpr" type="number" domain={[0, 1]} tick={{ fontSize: 10 }} label={{ value: 'False Positive Rate', position: 'insideBottom', offset: -5, fontSize: 10 }} />
-                <YAxis dataKey="tpr" type="number" domain={[0, 1]} tick={{ fontSize: 10 }} label={{ value: 'True Positive Rate', angle: -90, position: 'insideLeft', fontSize: 10 }} />
-                <Tooltip
-                  formatter={((val: any, name: any) => [Number(val).toFixed(3), name === 'tpr' ? 'True Positive Rate (Sensitivity)' : 'False Positive Rate']) as any}
-                  contentStyle={{ backgroundColor: '#FFFDF7', borderColor: '#EAE7DF', borderRadius: '6px', fontSize: '11px' }}
-                />
-                <ReferenceLine x={0} y={0} stroke="#EAE7DF" />
-                <Line type="monotone" dataKey="tpr" stroke="#171717" strokeWidth={2.5} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <p className="text-[11px] text-mutedText border-t border-appBorder pt-2">
-            The ROC curve maps sensitivity (TPR) against (1 - specificity) across all decision thresholds. An AUC of {testMetrics?.roc_auc.toFixed(3)} confirms strong discrimination above random chance (0.50).
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  const cells = [
+    {label:'Retained, correctly', value:matrix.tn, hint:'Actual retained · Predicted retained', className:'correct'},
+    {label:'False alarms', value:matrix.fp, hint:'Actual retained · Predicted churn', className:'false-alarm'},
+    {label:'Missed churners', value:matrix.fn, hint:'Actual churn · Predicted retained', className:'missed'},
+    {label:'Churn, correctly', value:matrix.tp, hint:'Actual churn · Predicted churn', className:'correct'},
+  ];
+  return <div className="evaluation-page">
+    <div className="page-intro"><div><div className="eyebrow"><span className="eyebrow-line"/> EVIDENCE, NOT ASSUMPTIONS</div><h1>Know what your<br/>model <em>can do.</em></h1><p>Measured performance on {test.samples.toLocaleString()} held-out records. Compare accuracy, the churn cases detected, and the tradeoffs behind each result.</p></div><button className="text-button" onClick={downloadReport}><Download size={16}/>Download evaluation</button></div>
+    {error && <p role="alert" className="inline-error">{error}</p>}
+    <section className="workspace-card predictor-selector"><div><div className="eyebrow">ACTIVE PREDICTION MODEL</div><h2>{evaluation.model_name}</h2><p>Used for your predictions, uploaded batches, and portfolio exports. {hosted ? 'Your model choice is isolated to this browser tab.' : 'Model changes apply to this local server.'}</p></div><div className="model-options">{options.map(algorithm => <button key={algorithm} disabled={loading || algorithm === active} aria-pressed={algorithm === active} className={algorithm===active ? 'selected' : ''} onClick={() => switchModel(algorithm)}>{loading ? <RefreshCw size={14} className="animate-spin"/> : <FlaskConical size={14}/>} {modelNames[algorithm] || algorithm}</button>)}</div></section>
+    <section className="evaluation-metrics" aria-label="Held-out model metrics">{[
+      ['Accuracy',percent(test.accuracy),'All predictions correct'],['Churn recall',percent(test.recall),'Actual churn cases detected'],
+      ['Precision',percent(test.precision),'Churn predictions correct'],['F1 score',test.f1.toFixed(3),'Precision and recall balance'],
+      ['ROC-AUC',test.roc_auc.toFixed(3),'Ranking across thresholds'],
+    ].map(([label,value,hint]) => <div className="overview-stat" key={label}><div className="stat-label">{label}</div><strong>{value}</strong><span>{hint}</span></div>)}</section>
+    {report && <section className="validation-story"><div><div className="eyebrow">THE MEASURED CHANGE</div><h2>{improvement != null && improvement > 0 ? `+${improvement.toFixed(2)} percentage points` : 'An honest model comparison.'}</h2><p>Selected model test accuracy: <strong>{percent(report.test_metrics.accuracy)}</strong>, compared with <strong>{percent(report.baseline_test_metrics.accuracy)}</strong> for the original CART model. Churn recall changes from {percent(report.baseline_test_metrics.recall)} to {percent(report.test_metrics.recall)}.</p></div><div className="validation-detail"><span>{report.folds}-fold cross-validation</span><strong>{percent(report.selected.accuracy)}</strong><small>Selected model's training CV accuracy<br/>Across {report.candidates.length} candidate configurations</small></div></section>}
+    {report?.target_accuracy && <section className="workspace-card"><div className="eyebrow">PREPROCESSING &amp; THE ACCURACY TARGET</div><h2 className="text-xl mt-3">Target: {percent(report.target_accuracy)} · Measured: {percent(report.test_metrics.accuracy)}</h2><p className="text-sm text-mutedText mt-3 leading-relaxed">{report.test_metrics.accuracy >= report.target_accuracy ? 'The measured test accuracy reaches the requested target on this fixed cohort.' : 'The requested target was not reached on this dataset. This workspace reports the measured score without substituting training accuracy or using post-churn fields.'}</p><p className="text-xs text-mutedText mt-3 leading-relaxed">Billing totals were repaired, categories normalized, and account/service features derived from pre-outcome inputs. Imputation, encoding, and any scaling were fitted inside each training fold. Candidate selection used training cross-validation only.</p><p className="text-xs text-mutedText mt-3">Selected preparation: {report.selected.preprocessing_kind?.replaceAll('_',' ') || 'original account features'}. Numeric scaling: {report.selected.scaled ? 'enabled' : 'not required for this model'}.</p></section>}
+    <div className="evaluation-grid"><section className="workspace-card"><div className="card-heading"><div><div className="eyebrow">PREDICTIONS VS OUTCOMES</div><h2>Where the model gets it right.</h2></div></div><div className="confusion-cells">{cells.map(cell => <div className={cell.className} key={cell.label}><span>{cell.label}</span><strong>{cell.value.toLocaleString()}</strong><small>{cell.hint}</small></div>)}</div><p className="card-footnote">Missed churners and false alarms have different business costs. Accuracy alone does not measure the value of a retention campaign.</p></section>
+      <section className="workspace-card"><div className="card-heading"><div><div className="eyebrow">DISCRIMINATION</div><h2>Ranking customers by risk.</h2></div><span className="subtle-tag">AUC {test.roc_auc.toFixed(3)}</span></div><div className="roc-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={evaluation.roc_curve} margin={{top:15,right:10,left:-12,bottom:25}}><XAxis dataKey="fpr" type="number" domain={[0,1]} tick={{fontSize:10,fill:'#8d9a81'}} tickLine={false} axisLine={false} label={{value:'False positive rate',position:'bottom',offset:10,fontSize:10,fill:'#8d9a81'}}/><YAxis domain={[0,1]} tick={{fontSize:10,fill:'#8d9a81'}} tickLine={false} axisLine={false}/><Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(3) : value} contentStyle={{fontSize:11,borderRadius:8,borderColor:'#dfe5dc'}}/><ReferenceLine segment={[{x:0,y:0},{x:1,y:1}]} stroke="#d6ddce" strokeDasharray="4 4"/><Line type="linear" dataKey="tpr" name="True positive rate" stroke="#5a7c58" strokeWidth={2.5} dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer></div><p className="card-footnote">The curve shows true positive rate against false positive rate. The dashed line represents random ranking.</p></section></div>
+    <section className="workspace-card"><div className="card-heading"><div><div className="eyebrow">GENERALIZATION CHECK</div><h2>Training and held-out performance.</h2></div><span className="subtle-tag">Same fixed split</span></div><div className="overflow-x-auto mt-5"><table className="w-full text-xs text-left"><thead><tr>{['Partition','Records','Accuracy','Recall','Precision','F1','ROC-AUC'].map(label => <th className="p-3" key={label}>{label}</th>)}</tr></thead><tbody>{[['Training',train],['Held-out test',test]].map(([name,metrics]) => {const values=metrics as typeof test; return <tr key={String(name)} className="border-b border-appBorder"><td className="p-3">{String(name)}</td><td className="p-3">{values.samples.toLocaleString()}</td><td className="p-3">{percent(values.accuracy)}</td><td className="p-3">{percent(values.recall)}</td><td className="p-3">{percent(values.precision)}</td><td className="p-3">{values.f1.toFixed(3)}</td><td className="p-3">{values.roc_auc.toFixed(3)}</td></tr>;})}</tbody></table></div><p className="card-footnote">Predicting every record as retained gives {evaluation.majority_baseline_accuracy != null ? percent(evaluation.majority_baseline_accuracy) : 'unavailable'} test accuracy. This is why churn recall and F1 matter alongside the headline accuracy.</p></section>
+    {report && <details className="workspace-card benchmark-details"><summary>How the prediction model was selected <ChevronRight size={17}/></summary><p>{report.protocol}</p><div className="overflow-x-auto"><table className="w-full text-xs text-left"><thead><tr>{['Best per family','CV accuracy','CV recall','CV F1','CV ROC-AUC'].map(value => <th className="p-3" key={value}>{value}</th>)}</tr></thead><tbody>{bestByFamily.map(candidate => <tr key={candidate.algorithm} className="border-b border-appBorder"><td className="p-3">{modelNames[candidate.algorithm] || candidate.algorithm}</td><td className="p-3">{percent(candidate.accuracy)}</td><td className="p-3">{percent(candidate.recall)}</td><td className="p-3">{candidate.f1.toFixed(3)}</td><td className="p-3">{candidate.roc_auc.toFixed(3)}</td></tr>)}</tbody></table></div><p>Selection uses mean training CV accuracy, with F1 as a tie-breaker. The standard deviation for the selected configuration is {(report.selected.accuracy_std*100).toFixed(2)} percentage points. The prior tree-only search is retained in the downloadable report.</p></details>}
+    <div className="evaluation-footer"><p>The Tree Observatory shows a separate, fitted CART reference model. Training that reference does not change the active selected predictor.</p><a href="#tree-observatory" className="text-button">Explore the reference tree <ArrowUpRight size={16}/></a></div>
+    {!hosted && <details className="workspace-card admin-details"><summary>Administrator access</summary><p>Model switching requires an administrator token on protected deployments. The token stays in memory for this tab.</p><input aria-label="Administrator token" type="password" autoComplete="off" placeholder="Administrator token" onChange={event => setAdminToken(event.target.value)} className="px-3 py-2 border border-appBorder rounded"/></details>}
+  </div>;
 };

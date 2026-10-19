@@ -1,6 +1,6 @@
 import React from 'react';
-import { LayoutDashboard, UserCheck, GitFork, BarChart3, FlaskConical, Users, BookOpen } from 'lucide-react';
-import { AppStatus } from '../types';
+import {LayoutDashboard, UserCheck, GitFork, BarChart3, FlaskConical, Users} from 'lucide-react';
+import {AppStatus} from '../types';
 
 interface NavbarProps {
   activeTab: string;
@@ -19,8 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, status 
     { id: 'customer-portfolio', label: 'Customer Portfolio', icon: Users },
   ];
 
-  const accuracyPct = status?.status?.accuracy ? (status.status.accuracy * 100).toFixed(2) : '79.91';
-  const criterionLabel = status?.config?.criterion?.toUpperCase() || 'GINI';
+  const accuracyPct = status?.status?.accuracy != null ? (status.status.accuracy * 100).toFixed(2) : '—';
+  const criterionLabel = status?.config?.criterion?.toUpperCase() || 'UNAVAILABLE';
 
   return (
     <header className="sticky top-0 z-50 bg-warmWhite/95 backdrop-blur-md border-b border-appBorder">
@@ -42,7 +42,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, status 
         {/* Live Model Telemetry */}
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-2 bg-softIvory border border-appBorder px-3 py-1.5 rounded text-xs font-mono">
-            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+            <span className={`w-2 h-2 rounded-full ${status?.status.model_trained ? 'bg-emerald-600' : 'bg-slate-400'}`}></span>
             <span className="text-mutedText">Model:</span>
             <span className="font-bold text-nearBlack">CART ({criterionLabel})</span>
             <span className="text-appBorder">|</span>
@@ -51,7 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, status 
           </div>
 
           <div className="text-[11px] font-mono font-bold px-2.5 py-1 bg-nearBlack text-warmWhite rounded">
-            TELCO 7,043
+            TELCO {status?.status.dataset_loaded ? status.status.total_records.toLocaleString() : 'Unavailable'}
           </div>
         </div>
       </div>

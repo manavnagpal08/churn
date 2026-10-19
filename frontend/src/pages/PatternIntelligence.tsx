@@ -1,21 +1,7 @@
 import React, { useState } from 'react';
-import { EdaAnalytics, FeatureImportanceItem } from '../types';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie, Legend
-} from 'recharts';
-import {
-  BarChart3,
-  Filter,
-  Info,
-  TrendingDown,
-  ShieldCheck,
-  CreditCard,
-  Wifi,
-  Users,
-  AlertTriangle,
-  Lightbulb
-} from 'lucide-react';
+import {EdaAnalytics, FeatureImportanceItem} from '../types';
+import {BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell} from 'recharts';
+import {Info} from 'lucide-react';
 
 interface PatternIntelligenceProps {
   analytics: EdaAnalytics | null;
@@ -31,8 +17,6 @@ export const PatternIntelligence: React.FC<PatternIntelligenceProps> = ({ analyt
   const paymentData = analytics?.payment_breakdown || [];
   const monthlyData = analytics?.monthly_charges_breakdown || [];
   const techSupportData = analytics?.tech_support_breakdown || [];
-  const seniorData = analytics?.senior_breakdown || [];
-  const partnerData = analytics?.partner_breakdown || [];
 
   return (
     <div className="space-y-8 pb-16">
@@ -46,7 +30,7 @@ export const PatternIntelligence: React.FC<PatternIntelligenceProps> = ({ analyt
             Historical Pattern Intelligence
           </h1>
           <p className="text-xs sm:text-sm text-mutedText mt-1">
-            Empirical subscriber trends and impurity-based split importance derived from Telco historical records.
+            Historical subscriber trends and feature importance from the active fitted model.
           </p>
         </div>
 
@@ -83,7 +67,7 @@ export const PatternIntelligence: React.FC<PatternIntelligenceProps> = ({ analyt
       <div className="bg-softIvory border-l-4 border-l-accentYellow p-4 rounded-r-lg border border-appBorder/80 text-xs text-mutedText leading-relaxed flex items-start gap-3">
         <Info className="w-5 h-5 text-nearBlack shrink-0 mt-0.5" />
         <div>
-          <strong className="text-nearBlack">Academic Epistemology & Non-Causation Disclaimer:</strong> Impurity-based feature importance reflects how frequently and effectively a feature separates classes within this specific training cohort. High importance indicates strong predictive association, <em>not causal agency</em>. Correlation with churn does not prove that modifying a feature directly changes subscriber behavior.
+          <strong className="text-nearBlack">Academic Epistemology & Non-Causation Disclaimer:</strong> Model feature importance summarizes fitted weights or split contributions, depending on the active algorithm. It is a model summary, not a causal effect. High importance indicates strong predictive association, <em>not causal agency</em>. Correlation with churn does not prove that modifying a feature directly changes subscriber behavior.
         </div>
       </div>
 
@@ -91,10 +75,10 @@ export const PatternIntelligence: React.FC<PatternIntelligenceProps> = ({ analyt
       <section className="bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-appBorder pb-3">
           <div>
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-mutedText">Fitted Model Weights</span>
-            <h3 className="text-base font-bold text-nearBlack">Gini Impurity-Reduction Feature Importance</h3>
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-mutedText">Active Model Summary</span>
+            <h3 className="text-base font-bold text-nearBlack">Active Model Feature Importance</h3>
           </div>
-          <span className="text-xs font-mono text-mutedText">Normalized Σ = 100%</span>
+          <span className="text-xs font-mono text-mutedText">Top {Math.min(10, featureImportances.length)} fitted features</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -109,7 +93,7 @@ export const PatternIntelligence: React.FC<PatternIntelligenceProps> = ({ analyt
               <div className="w-full bg-warmWhite border border-appBorder/60 h-2.5 rounded-full overflow-hidden">
                 <div
                   className="bg-accentYellow h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(100, feat.importance_pct * 2.5)}%` }}
+                  style={{ width: `${Math.min(100, feat.importance_pct)}%` }}
                 ></div>
               </div>
             </div>

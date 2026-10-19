@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { TreeNode } from '../types';
-import { ZoomIn, ZoomOut, RotateCcw, Info, CheckCircle2, AlertTriangle, Layers } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {TreeNode} from '../types';
+import {ZoomIn, ZoomOut, RotateCcw} from 'lucide-react';
 
 interface DecisionTreeViewerProps {
   rootNode: TreeNode;
@@ -24,7 +24,8 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
   selectedNodeId = null,
   onSelectNode
 }) => {
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(.65);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 50, y: 50 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -71,7 +72,8 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
     leafCounter = 0;
     const layout = assignPositions(rootNode, 0);
     const calculatedWidth = Math.max(1000, leafCounter * (nodeWidth + horizontalGap) + 150);
-    const calculatedHeight = (rootNode.depth ? 6 : 7) * (nodeHeight + verticalGap) + 200;
+    const maximumDepth = (node: TreeNode): number => Math.max(node.depth, ...(node.children || []).map(maximumDepth));
+    const calculatedHeight = (maximumDepth(rootNode) + 1) * (nodeHeight + verticalGap) + 70;
 
     return {
       layoutTree: layout,
@@ -81,12 +83,14 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
   }, [rootNode]);
 
   // Handle Pan and Zoom
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (e: React.PointerEvent) => {
+    if (e.button !== 0 || !e.isPrimary) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handleMouseMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
     setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
   };
@@ -94,9 +98,21 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
   const handleMouseUp = () => setIsDragging(false);
 
   const resetView = () => {
-    setZoom(0.85);
-    setPan({ x: 40, y: 30 });
+    const width = canvasRef.current?.clientWidth || 600;
+    const height = canvasRef.current?.clientHeight || 600;
+    const scale = Math.min(1, (width - 30) / totalWidth, (height - 30) / totalHeight);
+    setZoom(scale); setPan({x: 15, y: 15});
   };
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0].contentRect.width;
+      setPan({x: width / 2 - (layoutTree.x + 110) * .65, y: 30});
+    });
+    observer.observe(canvasRef.current);
+    return () => observer.disconnect();
+  }, [layoutTree.x]);
 
   // Flatten layout to draw edges and nodes
   const { nodesList, edgesList } = useMemo(() => {
@@ -131,8 +147,8 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
   return (
     <div className="relative border border-appBorder rounded-lg bg-softIvory overflow-hidden select-none h-[720px] flex flex-col">
       {/* Top Toolbar */}
-      <div className="h-14 px-6 border-b border-appBorder bg-warmWhite flex items-center justify-between z-10">
-        <div className="flex items-center gap-4">
+      <div className="min-h-14 flex-wrap gap-3 p-3 border-b border-appBorder bg-warmWhite flex items-center justify-between z-10">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-accentYellow"></span>
             <span className="text-xs font-mono font-bold tracking-wider uppercase text-nearBlack">
@@ -140,19 +156,19 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
             </span>
           </div>
           <span className="text-xs text-mutedText border-l border-appBorder pl-4">
-            {rootNode.impurity_type} Criterion | Depth: {layoutTree.node.depth ?? 'Max 5'} | Nodes: {nodesList.length}
+            {rootNode.impurity_type} Criterion | Depth: {Math.max(...nodesList.map(item => item.node.depth))} | Nodes: {nodesList.length}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-softIvory border border-appBorder rounded-md p-1 mr-2 text-xs">
+          <div className="hidden lg:flex items-center bg-softIvory border border-appBorder rounded-md p-1 mr-2 text-xs">
             <span className="flex items-center gap-1.5 px-2 py-0.5 font-medium text-nearBlack">
               <span className="w-2.5 h-2.5 rounded bg-accentYellow border border-nearBlack"></span>
               Selected / Active
             </span>
             <span className="flex items-center gap-1.5 px-2 py-0.5 font-medium text-accentRed">
               <span className="w-2.5 h-2.5 rounded bg-accentRed"></span>
-              High Churn
+              Churn majority
             </span>
             <span className="flex items-center gap-1.5 px-2 py-0.5 font-medium text-emerald-700">
               <span className="w-2.5 h-2.5 rounded bg-emerald-600"></span>
@@ -168,7 +184,7 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
-            onClick={() => setZoom(z => Math.max(0.3, z - 0.15))}
+            onClick={() => setZoom(z => Math.max(0.04, z - 0.10))}
             className="p-1.5 rounded hover:bg-softIvory border border-appBorder text-nearBlack transition-colors"
             title="Zoom Out"
           >
@@ -177,7 +193,8 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
           <button
             onClick={resetView}
             className="p-1.5 rounded hover:bg-softIvory border border-appBorder text-nearBlack transition-colors"
-            title="Reset View"
+            title="Fit whole tree"
+            aria-label="Fit whole tree"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -187,9 +204,13 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
       {/* Main Canvas Area */}
       <div
         className="flex-1 cursor-grab active:cursor-grabbing overflow-hidden relative"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
+        ref={canvasRef}
+        style={{touchAction: 'none'}}
+        onPointerDown={handleMouseDown}
+        onPointerMove={handleMouseMove}
+        onPointerUp={handleMouseUp}
+        onPointerCancel={handleMouseUp}
+        onLostPointerCapture={handleMouseUp}
       >
         <svg
           className="w-full h-full"
@@ -273,6 +294,11 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
               <g
                 key={`node-${n.node.id}`}
                 transform={`translate(${n.x}, ${n.y})`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Node ${n.node.id}: ${n.node.name}, churn probability ${(n.node.churn_prob * 100).toFixed(1)} percent`}
+                onPointerDown={event => event.stopPropagation()}
+                onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); handleNodeClick(n.node);} }}
                 onClick={() => handleNodeClick(n.node)}
                 className="cursor-pointer group"
               >

@@ -1,35 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { TreeStructureResponse, TreeNode, ModelEvaluation } from '../types';
-import { fetchTreeStructure, trainModel, fetchModelComparison } from '../services/api';
-import { DecisionTreeViewer } from '../components/DecisionTreeViewer';
-import {
-  GitFork,
-  Sliders,
-  RefreshCw,
-  Info,
-  CheckCircle2,
-  Layers,
-  ArrowRight,
-  BookOpen,
-  Scale
-} from 'lucide-react';
+import React, { useState } from 'react';
+import {TreeStructureResponse, TreeNode, ModelEvaluation} from '../types';
+import {fetchTreeStructure, trainModel, fetchModelComparison} from '../services/api';
+import {DecisionTreeViewer} from '../components/DecisionTreeViewer';
+import {Sliders, RefreshCw, BookOpen, Scale} from 'lucide-react';
 
 interface TreeObservatoryProps {
   initialTree: TreeStructureResponse | null;
   onModelRetrained?: () => void;
+  trainingEnabled?: boolean;
 }
 
-export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, onModelRetrained }) => {
+export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, onModelRetrained, trainingEnabled = true }) => {
   const [treeData, setTreeData] = useState<TreeStructureResponse | null>(initialTree);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
 
   // Hyperparameters
-  const [criterion, setCriterion] = useState<'gini' | 'entropy'>('gini');
-  const [maxDepth, setMaxDepth] = useState<number>(5);
-  const [minSamplesLeaf, setMinSamplesLeaf] = useState<number>(20);
-  const [ccpAlpha, setCcpAlpha] = useState<number>(0.0);
+  const [criterion, setCriterion] = useState<'gini' | 'entropy'>((initialTree?.config.criterion as 'gini' | 'entropy') || 'gini');
+  const [maxDepth, setMaxDepth] = useState<number>(initialTree?.config.max_depth ?? 4);
+  const [minSamplesLeaf, setMinSamplesLeaf] = useState<number>(initialTree?.config.min_samples_leaf ?? 15);
+  const [ccpAlpha, setCcpAlpha] = useState<number>(initialTree?.config.ccp_alpha ?? 0);
 
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [comparison, setComparison] = useState<{
     gini: ModelEvaluation;
     entropy: ModelEvaluation;
@@ -37,20 +29,14 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
   } | null>(null);
   const [showComparison, setShowComparison] = useState(false);
 
-  useEffect(() => {
-    if (!treeData) {
-      loadTree();
-    }
-  }, []);
-
   const loadTree = async () => {
     try {
-      setLoading(true);
+      setLoading(true); setError(null);
       const res = await fetchTreeStructure();
       setTreeData(res);
       setSelectedNode(res.root);
     } catch (err) {
-      console.error('Error fetching tree structure:', err);
+      setError(err instanceof Error ? err.message : 'The model operation failed.');
     } finally {
       setLoading(false);
     }
@@ -58,7 +44,7 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
 
   const handleRetrain = async () => {
     try {
-      setLoading(true);
+      setLoading(true); setError(null);
       await trainModel({
         criterion,
         max_depth: maxDepth,
@@ -68,7 +54,7 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
       await loadTree();
       if (onModelRetrained) onModelRetrained();
     } catch (err) {
-      console.error('Retrain failed:', err);
+      setError(err instanceof Error ? err.message : 'The model operation failed.');
     } finally {
       setLoading(false);
     }
@@ -76,12 +62,12 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
 
   const handleFetchComparison = async () => {
     try {
-      setLoading(true);
+      setLoading(true); setError(null);
       const comp = await fetchModelComparison();
       setComparison(comp);
       setShowComparison(true);
     } catch (err) {
-      console.error('Comparison fetch failed:', err);
+      setError(err instanceof Error ? err.message : 'The model operation failed.');
     } finally {
       setLoading(false);
     }
@@ -89,6 +75,7 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
 
   return (
     <div className="space-y-8 pb-16">
+      {error && <p role="alert" className="p-4 bg-accentRed/10 border border-accentRed/30 rounded text-sm text-accentRed">{error}</p>}
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-appBorder pb-6">
         <div>
@@ -99,12 +86,13 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
             Decision Tree Observatory
           </h1>
           <p className="text-xs sm:text-sm text-mutedText mt-1">
-            Audit every node, purity partition, and rule boundary dynamically fitted on training data.
+            Inspect the separate CART reference model. Retraining this tree keeps the active ensemble predictor unchanged.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
+            disabled={loading}
             onClick={handleFetchComparison}
             className="flex items-center gap-1.5 px-3 py-2 bg-warmWhite border border-appBorder rounded-md text-xs font-mono font-medium text-nearBlack hover:bg-softIvory transition-colors"
           >
@@ -114,6 +102,7 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
         </div>
       </div>
 
+      {!trainingEnabled && <p className="text-xs text-mutedText bg-softIvory border border-appBorder rounded-lg p-4">The hosted reference tree stays fixed for consistent results. Explore its nodes or compare split criteria here; use the local application for retraining experiments.</p>}
       {/* Model Control Bar: Max Depth, Min Leaf, Pruning, Criterion */}
       <div className="bg-warmWhite border border-appBorder rounded-lg p-5">
         <div className="flex items-center justify-between mb-4 border-b border-appBorder pb-3">
@@ -194,7 +183,7 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
             />
             <div className="flex justify-between text-[10px] font-mono text-mutedText mt-0.5">
               <span>5</span>
-              <span>20 (Default)</span>
+              <span>15 (Startup default)</span>
               <span>100</span>
             </div>
           </div>
@@ -224,11 +213,11 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
           <div>
             <button
               onClick={handleRetrain}
-              disabled={loading}
+              disabled={loading || !trainingEnabled}
               className="w-full py-2.5 bg-accentYellow hover:bg-yellow-400 text-nearBlack font-bold text-xs uppercase tracking-wider rounded border border-nearBlack flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Retraining...' : 'Apply & Retrain Tree'}</span>
+              <span>{loading ? 'Retraining...' : trainingEnabled ? 'Retrain reference tree' : 'Training available locally'}</span>
             </button>
           </div>
         </div>
@@ -342,7 +331,7 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
               1. Root Feature Split
             </span>
             <p>
-              The algorithm evaluates every candidate feature threshold. In the telecom dataset, <strong>Contract type (Month-to-month vs Long-term)</strong> achieves the largest reduction in impurity, isolating high churn risk at the very first step.
+              The algorithm evaluates every candidate feature threshold. In the telecom dataset, <strong>{treeData?.root.name || 'The selected root feature'}</strong> achieves the largest reduction in impurity, isolating high churn risk at the very first step.
             </p>
           </div>
 

@@ -1,1 +1,12 @@
 .vercel
+__pycache__/
+*.py[cod]
+frontend/node_modules/
+frontend/dist/
+.env
+.env.*
+!.env.example
+*.log
+backend/artifacts/*.joblib
+!backend/artifacts/predictor_bundle.joblib
+backend/artifacts/training_progress.json

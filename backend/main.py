@@ -1,245 +1,240 @@
+"""HTTP interface for the explainable churn model."""
 import io
 import os
 import sys
+import logging
+import secrets
+from contextlib import asynccontextmanager
+from typing import Optional, List, Dict, Any
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from typing import Optional, List, Dict, Any
+from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from models import CustomerInput, ModelTrainConfig, PredictionResponse, BatchPredictionResponse, PredictorSelectConfig
+from pipeline import pipeline, ALL_MODEL_FEATURES, REQUEST_PREDICTOR
 
-from models import CustomerInput, ModelTrainConfig, PredictionResponse, BatchPredictionResponse
-from pipeline import pipeline, ALL_MODEL_FEATURES
+logger = logging.getLogger(__name__)
+MAX_UPLOAD_BYTES = (4 if os.getenv('VERCEL') else 10) * 1024 * 1024
 
-app = FastAPI(
-    title="CHURN//ZERO API",
-    description="Customer Churn Prediction & Decision Tree Intelligence Platform",
-    version="1.0.0"
-)
+@asynccontextmanager
+async def lifespan(app):
+    # Failed initialization fails readiness instead of pretending to be online.
+    pipeline.load_and_prepare_data()
+    pipeline.train_model(**pipeline.current_config)
+    pipeline.initialize_predictor()
+    yield
 
-# Enable CORS for frontend Vite dev server (and production host)
+app = FastAPI(title='CHURN//ZERO API', version='1.1.0', lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[origin.strip() for origin in os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://127.0.0.1:3000').split(',') if origin.strip()],
+    allow_credentials=False, allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Admin-Token', 'X-Predictor'],
 )
 
-@app.on_event("startup")
-def startup_event():
-    print("[CHURN//ZERO] Initializing data pipeline and baseline Decision Tree...")
-    try:
-        pipeline.load_and_prepare_data()
-        pipeline.train_model(criterion="gini", max_depth=4, min_samples_leaf=15)
-        print("[CHURN//ZERO] Pipeline ready! Baseline Gini Decision Tree trained successfully.")
-    except Exception as e:
-        print(f"[CHURN//ZERO] Startup initialization warning: {e}")
 
-@app.get("/api/status")
+def require_model_admin(x_admin_token: Optional[str] = Header(None)):
+    if os.getenv('VERCEL'):
+        raise HTTPException(409, 'Reference-tree retraining is available in the local application. The hosted reference model is fixed for consistent results.')
+    token = os.getenv('CHURN_ADMIN_TOKEN')
+    if token and (not x_admin_token or not secrets.compare_digest(token, x_admin_token)):
+        raise HTTPException(403, 'Model changes require an administrator token.')
+    if os.getenv('CHURN_ENV') == 'production' and not token:
+        raise HTTPException(503, 'Model changes are disabled until an administrator token is configured.')
+
+
+def internal_error(exc):
+    logger.exception('Request failed', exc_info=exc)
+    return HTTPException(500, 'The operation could not be completed. Please retry or contact the application administrator.')
+
+
+@app.get('/api/status')
 def get_status():
-    try:
-        if not pipeline.status["dataset_loaded"]:
-            pipeline.load_and_prepare_data()
-        if not pipeline.status["model_trained"]:
-            pipeline.train_model()
-    except Exception as e:
-        print(f"[Lazy Init Warning]: {e}")
-        
-    return {
-        "brand": "CHURN//ZERO",
-        "tagline": "Understand the risk. Decode the decision. Retain the customer.",
-        "status": pipeline.status,
-        "config": pipeline.current_config
-    }
+    with pipeline._lock:
+        hosted=bool(os.getenv('VERCEL'))
+        return {'brand': 'CHURN//ZERO', 'tagline': 'Understand the risk. Decode the decision. Retain the customer.',
+                'status': pipeline.current_status(), 'config': pipeline.current_config.copy(),
+                'capabilities': {'hosted':hosted,'reference_training':not hosted,'predictor_scope':'browser' if hosted else 'server'}}
 
-@app.get("/api/analytics/eda")
+
+@app.get('/api/health')
+def health():
+    if not pipeline.status['model_trained']:
+        raise HTTPException(503, 'Model is not ready.')
+    return {'ready': True}
+
+
+@app.get('/api/analytics/eda')
 def get_eda_analytics():
-    try:
-        return pipeline.get_eda_analytics()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return pipeline.get_eda_analytics()
 
-@app.post("/api/model/train")
+
+@app.post('/api/model/train', dependencies=[Depends(require_model_admin)])
 def train_model(config: ModelTrainConfig):
     try:
-        eval_result = pipeline.train_model(
-            criterion=config.criterion,
-            max_depth=config.max_depth,
-            min_samples_leaf=config.min_samples_leaf,
-            ccp_alpha=config.ccp_alpha
-        )
-        return {
-            "message": f"Decision Tree ({config.criterion.upper()}) retrained successfully.",
-            "evaluation": eval_result,
-            "status": pipeline.status
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        evaluation = pipeline.train_model(**config.model_dump())
+        return {'message': 'Decision tree retrained successfully.', 'evaluation': evaluation, 'status': pipeline.status.copy()}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
-@app.get("/api/model/evaluation")
+
+@app.get('/api/model/evaluation')
 def get_model_evaluation():
-    try:
-        if pipeline.model is None:
-            pipeline.train_model()
-        cache_key = f"{pipeline.current_config['criterion']}_{pipeline.current_config['max_depth']}_{pipeline.current_config['min_samples_leaf']}_{pipeline.current_config['ccp_alpha']}"
-        if cache_key in pipeline.eval_cache:
-            return pipeline.eval_cache[cache_key]
-        return pipeline._evaluate_model(pipeline.model)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return pipeline.get_active_evaluation()
 
-@app.get("/api/model/comparison")
+
+@app.post('/api/model/select')
+def select_predictor(config: PredictorSelectConfig,x_admin_token: Optional[str] = Header(None)):
+    try:
+        if os.getenv('VERCEL'):
+            available={'decision_tree',pipeline.predictor_report['selected']['algorithm']} if pipeline.predictor_report else {'decision_tree'}
+            if config.algorithm not in available:
+                raise ValueError('This predictor has no validated benchmark configuration.')
+            token=REQUEST_PREDICTOR.set(config.algorithm)
+            try:
+                return {'evaluation':pipeline.get_active_evaluation(),'status':pipeline.current_status()}
+            finally:
+                REQUEST_PREDICTOR.reset(token)
+        require_model_admin(x_admin_token)
+        evaluation = pipeline.select_predictor(config.algorithm)
+        return {'evaluation': evaluation, 'status': pipeline.current_status()}
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get('/api/model/comparison')
 def compare_criteria():
-    """
-    Evaluates both CART Gini and Entropy criteria on the identical train/test split.
-    Accurately demonstrates CART Gini vs Entropy/Information-Gain formulation.
-    """
-    try:
-        depth = pipeline.current_config.get("max_depth", 5)
-        leaf = pipeline.current_config.get("min_samples_leaf", 20)
-        alpha = pipeline.current_config.get("ccp_alpha", 0.0)
-        
-        # Save current active criterion
-        active_crit = pipeline.current_config["criterion"]
-        
-        # Train and evaluate Gini
-        gini_eval = pipeline.train_model("gini", max_depth=depth, min_samples_leaf=leaf, ccp_alpha=alpha)
-        # Train and evaluate Entropy
-        entropy_eval = pipeline.train_model("entropy", max_depth=depth, min_samples_leaf=leaf, ccp_alpha=alpha)
-        
-        # Restore user's active criterion
-        if active_crit != "entropy":
-            pipeline.train_model("gini", max_depth=depth, min_samples_leaf=leaf, ccp_alpha=alpha)
-            
-        return {
-            "gini": gini_eval,
-            "entropy": entropy_eval,
-            "comparison_notes": {
-                "academic_context": "Both configurations use CART's binary recursive partitioning framework implemented in scikit-learn. The 'entropy' criterion measures Information Gain via Shannon entropy (-sum(p*log2(p))), similar to ID3/C4.5 split criteria, whereas 'gini' measures Gini Impurity (1 - sum(p^2))."
-            }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    result = pipeline.compare_criteria()
+    result['comparison_notes'] = {'academic_context': 'Both models use binary CART. Gini measures impurity; entropy measures Shannon information gain. The active prediction model is unchanged by comparison.'}
+    return result
 
-@app.get("/api/tree/structure")
+
+@app.get('/api/tree/structure')
 def get_tree_structure():
-    try:
-        return pipeline.get_tree_structure()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return pipeline.get_tree_structure()
 
-@app.post("/api/predict/single", response_model=PredictionResponse)
+
+@app.post('/api/predict/single', response_model=PredictionResponse)
 def predict_single(customer: CustomerInput):
-    try:
-        data_dict = customer.dict(by_alias=True)
-        res = pipeline.predict_single_customer(data_dict)
-        return res
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return pipeline.predict_single_customer(customer.model_dump(by_alias=True))
 
-@app.post("/api/predict/batch", response_model=BatchPredictionResponse)
+
+@app.post('/api/predict/batch', response_model=BatchPredictionResponse)
 def predict_batch_records(records: List[Dict[str, Any]]):
     try:
-        df_input = pd.DataFrame(records)
-        return pipeline.predict_batch(df_input)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return pipeline.predict_batch(pd.DataFrame(records))
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
-@app.post("/api/predict/upload")
+
+@app.post('/api/predict/upload', response_model=BatchPredictionResponse)
 async def upload_and_predict_batch(file: UploadFile = File(...)):
-    filename = file.filename.lower()
-    content = await file.read()
-    
+    filename = (file.filename or '').lower()
+    if not filename.endswith(('.csv', '.xlsx')):
+        raise HTTPException(400, 'Choose a CSV or XLSX file.')
     try:
-        if filename.endswith(".csv"):
-            df_upload = pd.read_csv(io.BytesIO(content))
-        elif filename.endswith((".xlsx", ".xls")):
-            df_upload = pd.read_excel(io.BytesIO(content))
+        content = await file.read(MAX_UPLOAD_BYTES + 1)
+    finally:
+        await file.close()
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f'File exceeds the {MAX_UPLOAD_BYTES // (1024 * 1024)} MB upload limit.')
+    try:
+        import zipfile
+        if filename.endswith('.xlsx'):
+            with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                if sum(item.file_size for item in archive.infolist()) > 100 * 1024 * 1024:
+                    raise ValueError('Expanded workbook exceeds 100 MB.')
+            frame = pd.read_excel(io.BytesIO(content), nrows=10001)
         else:
-            raise HTTPException(status_code=400, detail="Only CSV or Excel (.xlsx, .xls) files are supported.")
-            
-        # Schema validation: Ensure model features exist
-        missing = [f for f in ALL_MODEL_FEATURES if f not in df_upload.columns]
-        if missing:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Uploaded file missing required features: {missing}. Schema must match the Telco dataset features."
-            )
-            
-        results = pipeline.predict_batch(df_upload)
-        return results
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"File processing error: {str(e)}")
+            frame = pd.read_csv(io.BytesIO(content), nrows=10001)
+        frame.columns = frame.columns.str.strip()
+        # Scoring is synchronous CPU work; keep it off the event loop.
+        from starlette.concurrency import run_in_threadpool
+        return await run_in_threadpool(pipeline.predict_batch, frame)
+    except Exception as exc:
+        raise HTTPException(422, f'Unable to score file: {exc}') from exc
 
-@app.get("/api/portfolio/customers")
+
+@app.get('/api/predict/template')
+def batch_template():
+    sample = CustomerInput().model_dump(by_alias=True)
+    return csv_response(pd.DataFrame([sample]), 'churn_zero_batch_template.csv')
+
+
+@app.get('/api/portfolio/customers')
 def get_portfolio_customers(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(25, ge=5, le=100),
-    search: Optional[str] = Query(None),
-    contract: Optional[str] = Query(None),
-    churn_filter: Optional[str] = Query(None),
-    sort_by: str = Query("CustomerID"),
-    sort_dir: str = Query("asc")
+    page: int = Query(1, ge=1), page_size: int = Query(25, ge=5, le=100),
+    search: Optional[str] = Query(None, max_length=200), contract: Optional[str] = None,
+    churn_filter: Optional[str] = None, sort_by: str = 'CustomerID', sort_dir: str = 'asc',
 ):
-    try:
-        return pipeline.get_portfolio_customers(
-            page=page,
-            page_size=page_size,
-            search=search,
-            contract=contract,
-            churn_filter=churn_filter,
-            sort_by=sort_by,
-            sort_dir=sort_dir
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return pipeline.get_portfolio_customers(page, page_size, search, contract, churn_filter, sort_by, sort_dir)
 
-@app.get("/api/portfolio/export")
-def export_portfolio_csv(
-    contract: Optional[str] = Query(None),
-    churn_filter: Optional[str] = Query(None)
-):
-    try:
-        df = pipeline.df_clean.copy()
-        if contract and contract != "All":
-            df = df[df['Contract'] == contract]
-        if churn_filter and churn_filter != "All":
-            if churn_filter.lower() in ["churn", "yes", "1"]:
-                df = df[df['Target'] == 1]
-            elif churn_filter.lower() in ["retained", "no", "0"]:
-                df = df[df['Target'] == 0]
-                
-        # Generate model predictions for the exported set
-        X_proc = pipeline.preprocessor.transform(df[ALL_MODEL_FEATURES])
-        preds = pipeline.model.predict(X_proc)
-        probs = pipeline.model.predict_proba(X_proc)[:, 1]
-        
-        df_export = df[['CustomerID', 'Gender', 'Senior Citizen', 'Partner', 'Dependents',
-                        'Tenure Months', 'Contract', 'Internet Service', 'Payment Method',
-                        'Monthly Charges', 'Total Charges', 'Churn Label']].copy()
-        df_export['Predicted_Churn'] = ["Yes" if p == 1 else "No" for p in preds]
-        df_export['Model_Churn_Probability'] = [round(float(p), 4) for p in probs]
-        df_export['Risk_Tier'] = ["High Risk" if p >= 0.6 else ("Moderate Risk" if p >= 0.3 else "Low Risk") for p in probs]
-        
-        stream = io.StringIO()
-        df_export.to_csv(stream, index=False)
-        stream.seek(0)
-        
-        return StreamingResponse(
-            io.BytesIO(stream.getvalue().encode()),
-            media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=churn_zero_portfolio_export.csv"}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-if __name__ == "__main__":
+def csv_response(frame, filename):
+    # Prevent spreadsheet formula execution from user-controlled text.
+    safe = frame.copy()
+    for column in safe.select_dtypes(include=['object', 'string']).columns:
+        safe[column] = safe[column].map(lambda value: "'" + value if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r', '\n')) else value)
+    return StreamingResponse(io.BytesIO(safe.to_csv(index=False).encode('utf-8-sig')),
+        media_type='text/csv', headers={'Content-Disposition': f'attachment; filename={filename}'})
+
+
+@app.get('/api/portfolio/export')
+def export_portfolio_csv(contract: Optional[str] = None, churn_filter: Optional[str] = None,
+                         search: Optional[str] = Query(None, max_length=200),
+                         sort_by: str = 'CustomerID', sort_dir: str = 'asc'):
+    with pipeline._lock:
+        # Reuse the exact portfolio filtering and ordering logic.
+        result = pipeline.get_portfolio_customers(page_size=len(pipeline.df_clean), search=search,
+            contract=contract, churn_filter=churn_filter, sort_by=sort_by, sort_dir=sort_dir)
+        ids = [row['CustomerID'] for row in result['customers']]
+        frame = pipeline.df_clean.set_index('CustomerID').loc[ids].reset_index()
+        columns = ['CustomerID', 'Gender', 'Senior Citizen', 'Partner', 'Dependents',
+                   'Tenure Months', 'Contract', 'Internet Service', 'Payment Method',
+                   'Monthly Charges', 'Total Charges', 'Churn Label']
+        exported = frame[columns].copy()
+        if len(frame):
+            transformed = pipeline.predictor_input(frame)
+            labels = pipeline.model_labels(pipeline.predictor, transformed)
+            probabilities = pipeline.model_probabilities(pipeline.predictor, transformed)[:, 1]
+        else:
+            labels, probabilities = [], []
+        exported['Predicted_Churn'] = ['Yes' if label == 1 else 'No' for label in labels]
+        exported['Model_Churn_Probability'] = [round(float(prob), 4) for prob in probabilities]
+        exported['Risk_Tier'] = ['High Risk' if prob >= .6 else 'Moderate Risk' if prob >= .3 else 'Low Risk' for prob in probabilities]
+        exported['Prediction_Model'] = pipeline.model_name
+        return csv_response(exported, 'churn_zero_portfolio_export.csv')
+
+
+@app.middleware('http')
+async def hosted_predictor_context(request,call_next):
+    """Hosted selections are isolated per browser request, never global worker state."""
+    token=None
+    if os.getenv('VERCEL'):
+        selected=request.headers.get('X-Predictor') or request.query_params.get('predictor')
+        if selected:
+            available={'decision_tree',pipeline.predictor_report['selected']['algorithm']} if pipeline.predictor_report else {'decision_tree'}
+            if selected not in available:
+                return JSONResponse(status_code=422,content={'detail':'Selected predictor is unavailable. Reload the workspace to use the current validated model.'})
+            token=REQUEST_PREDICTOR.set(selected)
+    try:
+        response=await call_next(request)
+        response.headers['X-Content-Type-Options']='nosniff'
+        return response
+    finally:
+        if token is not None: REQUEST_PREDICTOR.reset(token)
+
+
+frontend_dist = os.path.join(os.path.dirname(CURRENT_DIR), 'frontend', 'dist')
+if os.path.isdir(frontend_dist):
+    app.mount('/', StaticFiles(directory=frontend_dist, html=True), name='frontend')
+
+
+if __name__ == '__main__':
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run('main:app', host='127.0.0.1', port=8000)

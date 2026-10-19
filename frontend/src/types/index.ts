@@ -34,6 +34,14 @@ export interface DecisionPathStep {
 }
 
 export interface PredictionResult {
+  algorithm: string;
+  model_name: string;
+  explanation_method: string;
+  feature_contributions: Array<{feature: string; value: string | number; contribution: number}>;
+  baseline_probability?: number;
+  baseline_score?: number;
+  prediction_score?: number;
+  contribution_units?: string;
   prediction: string;
   churn_label: number;
   churn_probability: number;
@@ -46,6 +54,11 @@ export interface PredictionResult {
   timestamp: string;
 }
 
+export interface BenchmarkCandidate {
+  preprocessing_kind?: string; scaled?: boolean;
+  algorithm: string; parameters: Record<string, unknown>; accuracy: number;
+  recall: number; f1: number; roc_auc: number; accuracy_std: number;
+}
 export interface MetricSet {
   accuracy: number;
   precision: number;
@@ -77,6 +90,21 @@ export interface FeatureImportanceItem {
 }
 
 export interface ModelEvaluation {
+  algorithm: string;
+  model_name: string;
+  predictor_config: Record<string, unknown>;
+  importance_method?: string;
+  predictor_report?: {
+    folds: number; selection_metric: string; protocol: string;
+    target_accuracy?: number;
+    preprocessing_audit?: Record<string, unknown>;
+    selected: BenchmarkCandidate; candidates: BenchmarkCandidate[];
+    test_metrics: MetricSet; baseline_test_metrics: MetricSet;
+  };
+  selection_report?: { selected_config: ModelEvaluation['config']; folds: number; candidates: number;
+    baseline_cv_accuracy: number; selected_cv_accuracy: number; selected_cv_std: number; protocol: string;
+    candidate_test_metrics?: MetricSet; baseline_test_metrics?: MetricSet; };
+  majority_baseline_accuracy?: number;
   config: {
     criterion: string;
     max_depth: number;
@@ -90,6 +118,7 @@ export interface ModelEvaluation {
   roc_curve: RocPoint[];
   feature_importances: FeatureImportanceItem[];
   tree_metadata: {
+    estimators?: number;
     total_nodes: number;
     leaf_nodes: number;
     max_depth: number;
@@ -121,10 +150,12 @@ export interface TreeNode {
 }
 
 export interface TreeStructureResponse {
+  config: ModelEvaluation['config'];
   root: TreeNode;
   metadata: {
     criterion: string;
     max_depth: number;
+    estimators?: number;
     total_nodes: number;
     leaf_nodes: number;
     total_samples: number;
@@ -215,12 +246,16 @@ export interface PortfolioResponse {
 }
 
 export interface AppStatus {
+  capabilities?: {hosted: boolean; reference_training: boolean; predictor_scope: string};
   brand: string;
   tagline: string;
   status: {
     dataset_loaded: boolean;
     total_records: number;
     model_trained: boolean;
+    model_name?: string;
+    active_algorithm?: string;
+    reference_tree_accuracy?: number;
     active_criterion: string;
     last_trained_at: string | null;
     accuracy: number | null;

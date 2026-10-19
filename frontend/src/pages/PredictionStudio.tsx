@@ -1,28 +1,14 @@
 import React, { useState } from 'react';
-import { CustomerInput, PredictionResult } from '../types';
-import { predictSingleCustomer } from '../services/api';
-import {
-  ArrowRight,
-  ShieldAlert,
-  ShieldCheck,
-  GitCommit,
-  CheckCircle2,
-  AlertTriangle,
-  Info,
-  DollarSign,
-  User,
-  CreditCard,
-  Wifi,
-  Sliders,
-  HelpCircle,
-  TrendingDown
-} from 'lucide-react';
+import {CustomerInput, PredictionResult} from '../types';
+import {predictSingleCustomer} from '../services/api';
+import { ContributionExplanation } from '../components/ContributionExplanation';
+import {ArrowRight, GitCommit, AlertTriangle, User, CreditCard, Wifi, Sliders} from 'lucide-react';
 
 interface PredictionStudioProps {
   onInspectNodeInTree?: (nodeId: number) => void;
 }
 
-export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNodeInTree }) => {
+export const PredictionStudio: React.FC<PredictionStudioProps> = () => {
   const [formData, setFormData] = useState<CustomerInput>({
     Gender: 'Female',
     'Senior Citizen': 'No',
@@ -50,12 +36,26 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
   const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (field: keyof CustomerInput, value: any) => {
+    setResult(null);
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
       if (field === 'Tenure Months' || field === 'Monthly Charges') {
         const tenure = field === 'Tenure Months' ? Number(value) : prev['Tenure Months'];
         const monthly = field === 'Monthly Charges' ? Number(value) : prev['Monthly Charges'];
         updated['Total Charges'] = Math.round(tenure * monthly * 100) / 100;
+      }
+      if (field === 'Phone Service') updated['Multiple Lines'] = value === 'No' ? 'No phone service' : 'No';
+      if (field === 'Multiple Lines') updated['Phone Service'] = value === 'No phone service' ? 'No' : 'Yes';
+      const internetFields = ['Online Security', 'Online Backup', 'Device Protection', 'Tech Support', 'Streaming TV', 'Streaming Movies'] as const;
+      if (field === 'Internet Service') {
+        internetFields.forEach(key => { updated[key] = value === 'No' ? 'No internet service' : prev[key] === 'No internet service' ? 'No' : prev[key]; });
+      } else if (internetFields.includes(field as typeof internetFields[number])) {
+        if (value === 'No internet service') {
+          updated['Internet Service'] = 'No'; internetFields.forEach(key => { updated[key] = 'No internet service'; });
+        } else if (prev['Internet Service'] === 'No') {
+          updated['Internet Service'] = 'DSL';
+          internetFields.forEach(key => { if (key !== field) updated[key] = 'No'; });
+        }
       }
       return updated;
     });
@@ -77,6 +77,7 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
   };
 
   const loadPreset = (preset: 'at-risk' | 'loyal' | 'moderate') => {
+    setResult(null); setError(null);
     if (preset === 'at-risk') {
       setFormData({
         Gender: 'Female',
@@ -149,21 +150,21 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
   return (
     <div className="space-y-8 pb-16">
       {/* Header */}
-      <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-appBorder/80 rounded-xl p-6 shadow-xs flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Real-Time Underwriting
+          <span className="text-xs font-semibold uppercase tracking-wider text-mutedText">
+            Individual customer assessment
           </span>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-1">
-            Subscriber Risk Simulation &amp; Decision Path
+          <h1 className="text-2xl font-bold text-nearBlack tracking-tight mt-1">
+            Understand a customer’s risk.
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Configure subscriber inputs to trace their exact Boolean path through the CART decision tree.
+          <p className="text-xs sm:text-sm text-mutedText mt-1">
+            Assess a customer profile with the active prediction model, then explore the factors behind its score.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium mr-1">Load Preset:</span>
+          <span className="text-xs text-mutedText font-medium mr-1">Load Preset:</span>
           <button
             type="button"
             onClick={() => loadPreset('at-risk')}
@@ -181,7 +182,7 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           <button
             type="button"
             onClick={() => loadPreset('loyal')}
-            className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100 font-medium transition-colors"
+            className="text-xs px-3 py-1.5 rounded-lg border border-appBorder bg-softIvory text-nearBlack hover:bg-softIvory font-medium transition-colors"
           >
             Retained Case
           </button>
@@ -192,21 +193,21 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
         {/* Form Inputs */}
         <form onSubmit={handleAnalyze} className="lg:col-span-7 space-y-6">
           {/* Section 1: Customer Profile */}
-          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <User className="w-4 h-4 text-slate-700" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+          <div className="bg-white border border-appBorder/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
+              <User className="w-4 h-4 text-nearBlack" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
                 1. Customer Profile
               </h3>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Gender</label>
+                <label htmlFor="customer-gender" className="block text-mutedText font-medium mb-1.5">Gender</label>
                 <select
-                  value={formData.Gender}
+                  id="customer-gender" value={formData.Gender}
                   onChange={e => handleInputChange('Gender', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -214,11 +215,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Senior Citizen</label>
+                <label htmlFor="customer-senior-citizen" className="block text-mutedText font-medium mb-1.5">Senior Citizen</label>
                 <select
-                  value={formData['Senior Citizen']}
+                  id="customer-senior-citizen" value={formData['Senior Citizen']}
                   onChange={e => handleInputChange('Senior Citizen', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -226,11 +227,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Partner</label>
+                <label htmlFor="customer-partner" className="block text-mutedText font-medium mb-1.5">Partner</label>
                 <select
-                  value={formData.Partner}
+                  id="customer-partner" value={formData.Partner}
                   onChange={e => handleInputChange('Partner', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -238,11 +239,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Dependents</label>
+                <label htmlFor="customer-dependents" className="block text-mutedText font-medium mb-1.5">Dependents</label>
                 <select
-                  value={formData.Dependents}
+                  id="customer-dependents" value={formData.Dependents}
                   onChange={e => handleInputChange('Dependents', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -252,36 +253,36 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           </div>
 
           {/* Section 2: Account Information */}
-          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Sliders className="w-4 h-4 text-slate-700" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+          <div className="bg-white border border-appBorder/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
+              <Sliders className="w-4 h-4 text-nearBlack" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
                 2. Account Information
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">
-                  Tenure: <strong className="text-slate-900">{formData['Tenure Months']} Months</strong>
+                <label htmlFor="customer-tenure-months" className="block text-mutedText font-medium mb-1.5">
+                  Tenure: <strong className="text-nearBlack">{formData['Tenure Months']} Months</strong>
                 </label>
                 <input
-                  type="range"
+                  id="customer-tenure-months" type="range"
                   min="0"
                   max="72"
                   value={formData['Tenure Months']}
                   onChange={e => handleInputChange('Tenure Months', parseInt(e.target.value))}
                   className="w-full accent-slate-900 cursor-pointer"
                 />
-                <span className="text-[11px] text-slate-400">0 to 72 months</span>
+                <span className="text-[11px] text-mutedText">0 to 72 months</span>
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Contract Term</label>
+                <label htmlFor="customer-contract" className="block text-mutedText font-medium mb-1.5">Contract Term</label>
                 <select
-                  value={formData.Contract}
+                  id="customer-contract" value={formData.Contract}
                   onChange={e => handleInputChange('Contract', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="Month-to-month">Month-to-month</option>
                   <option value="One year">One year</option>
@@ -290,11 +291,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Paperless Billing</label>
+                <label htmlFor="customer-paperless-billing" className="block text-mutedText font-medium mb-1.5">Paperless Billing</label>
                 <select
-                  value={formData['Paperless Billing']}
+                  id="customer-paperless-billing" value={formData['Paperless Billing']}
                   onChange={e => handleInputChange('Paperless Billing', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
@@ -304,21 +305,21 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           </div>
 
           {/* Section 3: Service Subscriptions */}
-          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Wifi className="w-4 h-4 text-slate-700" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+          <div className="bg-white border border-appBorder/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
+              <Wifi className="w-4 h-4 text-nearBlack" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
                 3. Service Subscriptions
               </h3>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Phone Service</label>
+                <label htmlFor="customer-phone-service" className="block text-mutedText font-medium mb-1.5">Phone Service</label>
                 <select
-                  value={formData['Phone Service']}
+                  id="customer-phone-service" value={formData['Phone Service']}
                   onChange={e => handleInputChange('Phone Service', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
@@ -326,11 +327,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Multiple Lines</label>
+                <label htmlFor="customer-multiple-lines" className="block text-mutedText font-medium mb-1.5">Multiple Lines</label>
                 <select
-                  value={formData['Multiple Lines']}
+                  id="customer-multiple-lines" value={formData['Multiple Lines']}
                   onChange={e => handleInputChange('Multiple Lines', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -339,11 +340,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Internet Service</label>
+                <label htmlFor="customer-internet-service" className="block text-mutedText font-medium mb-1.5">Internet Service</label>
                 <select
-                  value={formData['Internet Service']}
+                  id="customer-internet-service" value={formData['Internet Service']}
                   onChange={e => handleInputChange('Internet Service', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="DSL">DSL</option>
                   <option value="Fiber optic">Fiber optic</option>
@@ -352,11 +353,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Online Security</label>
+                <label htmlFor="customer-online-security" className="block text-mutedText font-medium mb-1.5">Online Security</label>
                 <select
-                  value={formData['Online Security']}
+                  id="customer-online-security" value={formData['Online Security']}
                   onChange={e => handleInputChange('Online Security', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -365,11 +366,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Online Backup</label>
+                <label htmlFor="customer-online-backup" className="block text-mutedText font-medium mb-1.5">Online Backup</label>
                 <select
-                  value={formData['Online Backup']}
+                  id="customer-online-backup" value={formData['Online Backup']}
                   onChange={e => handleInputChange('Online Backup', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -378,11 +379,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Device Protection</label>
+                <label htmlFor="customer-device-protection" className="block text-mutedText font-medium mb-1.5">Device Protection</label>
                 <select
-                  value={formData['Device Protection']}
+                  id="customer-device-protection" value={formData['Device Protection']}
                   onChange={e => handleInputChange('Device Protection', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -391,11 +392,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Tech Support</label>
+                <label htmlFor="customer-tech-support" className="block text-mutedText font-medium mb-1.5">Tech Support</label>
                 <select
-                  value={formData['Tech Support']}
+                  id="customer-tech-support" value={formData['Tech Support']}
                   onChange={e => handleInputChange('Tech Support', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -404,11 +405,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Streaming TV</label>
+                <label htmlFor="customer-streaming-tv" className="block text-mutedText font-medium mb-1.5">Streaming TV</label>
                 <select
-                  value={formData['Streaming TV']}
+                  id="customer-streaming-tv" value={formData['Streaming TV']}
                   onChange={e => handleInputChange('Streaming TV', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -417,11 +418,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Streaming Movies</label>
+                <label htmlFor="customer-streaming-movies" className="block text-mutedText font-medium mb-1.5">Streaming Movies</label>
                 <select
-                  value={formData['Streaming Movies']}
+                  id="customer-streaming-movies" value={formData['Streaming Movies']}
                   onChange={e => handleInputChange('Streaming Movies', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -432,21 +433,21 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           </div>
 
           {/* Section 4: Billing and Payment */}
-          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-              <CreditCard className="w-4 h-4 text-slate-700" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
+          <div className="bg-white border border-appBorder/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
+              <CreditCard className="w-4 h-4 text-nearBlack" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
                 4. Billing and Payment
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">Payment Method</label>
+                <label htmlFor="customer-payment-method" className="block text-mutedText font-medium mb-1.5">Payment Method</label>
                 <select
-                  value={formData['Payment Method']}
+                  id="customer-payment-method" value={formData['Payment Method']}
                   onChange={e => handleInputChange('Payment Method', e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 >
                   <option value="Electronic check">Electronic check</option>
                   <option value="Mailed check">Mailed check</option>
@@ -456,31 +457,31 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">
-                  Monthly Charges: <strong className="text-slate-900">${formData['Monthly Charges']}</strong>
+                <label htmlFor="customer-monthly-charges" className="block text-mutedText font-medium mb-1.5">
+                  Monthly Charges: <strong className="text-nearBlack">${formData['Monthly Charges']}</strong>
                 </label>
                 <input
-                  type="number"
+                  id="customer-monthly-charges" type="number"
                   step="0.5"
                   min="18"
                   max="130"
                   value={formData['Monthly Charges']}
                   onChange={e => handleInputChange('Monthly Charges', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-600 font-medium mb-1.5">
-                  Total Charges: <strong className="text-slate-900">${formData['Total Charges']}</strong>
+                <label htmlFor="customer-total-charges" className="block text-mutedText font-medium mb-1.5">
+                  Total Charges: <strong className="text-nearBlack">${formData['Total Charges']}</strong>
                 </label>
                 <input
-                  type="number"
+                  id="customer-total-charges" type="number"
                   step="1.0"
                   min="0"
                   value={formData['Total Charges']}
                   onChange={e => handleInputChange('Total Charges', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
+                  className="w-full bg-softIvory border border-appBorder rounded-lg px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
                 />
               </div>
             </div>
@@ -495,7 +496,7 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
             {loading ? (
               <span className="flex items-center gap-2">
                 <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
-                Evaluating Decision Tree Path...
+                Evaluating customer profile…
               </span>
             ) : (
               <>
@@ -516,19 +517,19 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           )}
 
           {!result && !loading && (
-            <div className="bg-white border border-dashed border-slate-200 rounded-xl p-10 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+            <div className="bg-white border border-dashed border-appBorder rounded-xl p-10 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-softIvory flex items-center justify-center mx-auto text-mutedText">
                 <GitCommit className="w-6 h-6" />
               </div>
-              <h4 className="text-sm font-bold text-slate-800">Ready for Model Underwriting</h4>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
-                Configure subscriber attributes or load a preset case above, then click <strong>ANALYZE SUBSCRIBER RISK</strong> to trace the exact CART decision nodes.
+              <h4 className="text-sm font-bold text-nearBlack">Ready to assess a customer</h4>
+              <p className="text-xs text-mutedText max-w-xs mx-auto leading-relaxed">
+                Configure subscriber attributes or load a preset case above, then click <strong>ANALYZE SUBSCRIBER RISK</strong> to assess the profile with the active prediction model.
               </p>
             </div>
           )}
 
           {result && (
-            <div className="bg-white border border-slate-200/80 rounded-xl p-6 space-y-6 shadow-xs">
+            <div className="bg-white border border-appBorder/80 rounded-xl p-6 space-y-6 shadow-xs">
               {/* Verdict Header */}
               <div
                 className={`p-5 rounded-xl border flex items-start justify-between ${
@@ -564,25 +565,27 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
                     {result.risk_level}
                   </span>
                   <div className="text-[10px] opacity-75 mt-1 font-mono">
-                    Criterion: {result.model_criterion.toUpperCase()}
+                    {result.model_name || result.model_criterion.toUpperCase()}
                   </div>
                 </div>
               </div>
 
+              {result.algorithm && result.algorithm !== 'decision_tree' && <ContributionExplanation result={result}/>}
+              {(!result.algorithm || result.algorithm === 'decision_tree') && <>
               {/* Key Drivers */}
               <div className="space-y-2">
-                <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">
+                <span className="text-xs font-semibold uppercase text-mutedText tracking-wider">
                   Key Identified Drivers
                 </span>
                 <div className="space-y-1.5">
                   {result.key_drivers && result.key_drivers.length > 0 ? (
                     result.key_drivers.map((driver, dIdx) => (
-                      <div key={dIdx} className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200/60 font-medium">
+                      <div key={dIdx} className="text-xs text-nearBlack bg-softIvory p-2.5 rounded-lg border border-appBorder/60 font-medium">
                         • {driver}
                       </div>
                     ))
                   ) : (
-                    <div className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
+                    <div className="text-xs text-mutedText bg-softIvory p-2.5 rounded-lg border border-appBorder/60">
                       Standard contractual profile matching baseline retention criteria.
                     </div>
                   )}
@@ -591,12 +594,12 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
 
               {/* Exact Boolean Path Traversal */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">
+                <div className="flex items-center justify-between border-b border-appBorder pb-2">
+                  <span className="text-xs font-semibold uppercase text-mutedText tracking-wider">
                     Node Traversal Trace
                   </span>
-                  <span className="text-[11px] font-mono text-slate-400">
-                    Depth: {result.decision_path.length} Levels
+                  <span className="text-[11px] font-mono text-mutedText">
+                    Path length: {result.decision_path.length} Levels
                   </span>
                 </div>
 
@@ -604,30 +607,30 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
                   {result.decision_path.map((step, idx) => (
                     <div
                       key={idx}
-                      className="p-3 bg-slate-50 border border-slate-200/70 rounded-lg text-xs space-y-1 hover:border-slate-300 transition-colors"
+                      className="p-3 bg-softIvory border border-appBorder/70 rounded-lg text-xs space-y-1 hover:border-appBorder transition-colors"
                     >
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="font-semibold text-slate-700">
+                        <span className="font-semibold text-nearBlack">
                           Step {idx + 1}: Node #{step.node_id}
                         </span>
                         <span
                           className={`font-semibold px-2 py-0.5 rounded text-[10px] ${
                             step.is_leaf
-                              ? 'bg-slate-900 text-white'
+                              ? 'bg-nearBlack text-white'
                               : step.satisfied
                               ? 'bg-amber-100 text-amber-900'
-                              : 'bg-slate-200 text-slate-800'
+                              : 'bg-slate-200 text-nearBlack'
                           }`}
                         >
-                          {step.is_leaf ? 'Leaf Outcome' : step.satisfied ? 'Condition Met (<=)' : 'Condition False (>)'}
+                          {step.is_leaf ? 'Leaf Outcome' : step.satisfied ? 'Branch evaluated' : 'Condition False (>)'}
                         </span>
                       </div>
 
-                      <div className="font-mono text-slate-800 font-medium">
+                      <div className="font-mono text-nearBlack font-medium">
                         {step.rule_condition}
                       </div>
 
-                      <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-200/50">
+                      <div className="text-[11px] text-mutedText flex items-center justify-between pt-1 border-t border-appBorder/50">
                         <span>Impurity: {step.impurity.toFixed(3)}</span>
                         <span>Node Samples: {step.samples.toLocaleString()}</span>
                       </div>
@@ -635,6 +638,7 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
                   ))}
                 </div>
               </div>
+              </> }
             </div>
           )}
         </div>

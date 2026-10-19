@@ -1,0 +1,9 @@
+.git
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/dt_model_*.joblib
+.env
+.env.*
+!.env.example
