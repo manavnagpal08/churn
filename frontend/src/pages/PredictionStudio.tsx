@@ -14,7 +14,8 @@ import {
   CreditCard,
   Wifi,
   Sliders,
-  HelpCircle
+  HelpCircle,
+  TrendingDown
 } from 'lucide-react';
 
 interface PredictionStudioProps {
@@ -22,7 +23,6 @@ interface PredictionStudioProps {
 }
 
 export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNodeInTree }) => {
-  // Default values set to an illustrative moderate-risk telecom subscriber
   const [formData, setFormData] = useState<CustomerInput>({
     Gender: 'Female',
     'Senior Citizen': 'No',
@@ -52,7 +52,6 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
   const handleInputChange = (field: keyof CustomerInput, value: any) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
-      // Auto-update Total Charges estimate if monthly or tenure changed
       if (field === 'Tenure Months' || field === 'Monthly Charges') {
         const tenure = field === 'Tenure Months' ? Number(value) : prev['Tenure Months'];
         const monthly = field === 'Monthly Charges' ? Number(value) : prev['Monthly Charges'];
@@ -77,7 +76,6 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
     }
   };
 
-  // Quick Preset Profiles for testing
   const loadPreset = (preset: 'at-risk' | 'loyal' | 'moderate') => {
     if (preset === 'at-risk') {
       setFormData({
@@ -151,77 +149,76 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
   return (
     <div className="space-y-8 pb-16">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-appBorder pb-6">
+      <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-nearBlack bg-softIvory border border-appBorder px-2.5 py-1 rounded">
-            Underwriting &amp; Inference Terminal
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            Real-Time Underwriting
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-nearBlack tracking-tight mt-2">
-            Subscriber Risk Evaluation
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight mt-1">
+            Subscriber Risk Simulation &amp; Decision Path
           </h1>
-          <p className="text-xs sm:text-sm text-mutedText mt-1">
-            Input verified account parameters to audit the customer's exact path through the CART decision tree.
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Configure subscriber inputs to trace their exact Boolean path through the CART decision tree.
           </p>
         </div>
 
-        {/* Presets */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-mutedText mr-1">Load Preset:</span>
+          <span className="text-xs text-slate-400 font-medium mr-1">Load Preset:</span>
           <button
             type="button"
             onClick={() => loadPreset('at-risk')}
-            className="text-xs px-2.5 py-1.5 rounded border border-accentRed/40 bg-accentRed/5 text-accentRed hover:bg-accentRed/10 font-mono font-medium transition-colors"
+            className="text-xs px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 font-medium transition-colors"
           >
-            High Risk Archetype
+            High Risk Case
           </button>
           <button
             type="button"
             onClick={() => loadPreset('moderate')}
-            className="text-xs px-2.5 py-1.5 rounded border border-accentYellow/50 bg-accentYellow/10 text-nearBlack hover:bg-accentYellow/20 font-mono font-medium transition-colors"
+            className="text-xs px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 font-medium transition-colors"
           >
             Moderate Case
           </button>
           <button
             type="button"
             onClick={() => loadPreset('loyal')}
-            className="text-xs px-2.5 py-1.5 rounded border border-appBorder bg-warmWhite text-nearBlack hover:bg-softIvory font-mono font-medium transition-colors"
+            className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100 font-medium transition-colors"
           >
-            Retained Cohort
+            Retained Case
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Customer Input Experience */}
+        {/* Form Inputs */}
         <form onSubmit={handleAnalyze} className="lg:col-span-7 space-y-6">
           {/* Section 1: Customer Profile */}
-          <div className="bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
-            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
-              <User className="w-4 h-4 text-nearBlack" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
+          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <User className="w-4 h-4 text-slate-700" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 1. Customer Profile
               </h3>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Gender</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Gender</label>
                 <select
                   value={formData.Gender}
                   onChange={e => handleInputChange('Gender', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
-                  <option value="Female">Female</option>
                   <option value="Male">Male</option>
+                  <option value="Female">Female</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Senior Citizen</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Senior Citizen</label>
                 <select
                   value={formData['Senior Citizen']}
                   onChange={e => handleInputChange('Senior Citizen', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -229,11 +226,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Partner</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Partner</label>
                 <select
                   value={formData.Partner}
                   onChange={e => handleInputChange('Partner', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -241,11 +238,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Dependents</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Dependents</label>
                 <select
                   value={formData.Dependents}
                   onChange={e => handleInputChange('Dependents', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -255,40 +252,36 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           </div>
 
           {/* Section 2: Account Information */}
-          <div className="bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
-            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
-              <Sliders className="w-4 h-4 text-nearBlack" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
+          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Sliders className="w-4 h-4 text-slate-700" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 2. Account Information
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">
-                  Tenure: <span className="font-mono font-bold text-nearBlack">{formData['Tenure Months']} Months</span>
+                <label className="block text-slate-600 font-medium mb-1.5">
+                  Tenure: <strong className="text-slate-900">{formData['Tenure Months']} Months</strong>
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="72"
                   value={formData['Tenure Months']}
-                  onChange={e => handleInputChange('Tenure Months', parseInt(e.target.value) || 0)}
-                  className="w-full accent-nearBlack cursor-pointer"
+                  onChange={e => handleInputChange('Tenure Months', parseInt(e.target.value))}
+                  className="w-full accent-slate-900 cursor-pointer"
                 />
-                <div className="flex justify-between text-[10px] font-mono text-mutedText mt-1">
-                  <span>0 mo</span>
-                  <span>36 mo</span>
-                  <span>72 mo</span>
-                </div>
+                <span className="text-[11px] text-slate-400">0 to 72 months</span>
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Contract Agreement</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Contract Term</label>
                 <select
                   value={formData.Contract}
                   onChange={e => handleInputChange('Contract', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack font-semibold focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="Month-to-month">Month-to-month</option>
                   <option value="One year">One year</option>
@@ -297,11 +290,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Paperless Billing</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Paperless Billing</label>
                 <select
                   value={formData['Paperless Billing']}
                   onChange={e => handleInputChange('Paperless Billing', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
@@ -311,21 +304,21 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           </div>
 
           {/* Section 3: Service Subscriptions */}
-          <div className="bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
-            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
-              <Wifi className="w-4 h-4 text-nearBlack" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
+          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <Wifi className="w-4 h-4 text-slate-700" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 3. Service Subscriptions
               </h3>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Phone Service</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Phone Service</label>
                 <select
                   value={formData['Phone Service']}
                   onChange={e => handleInputChange('Phone Service', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
@@ -333,11 +326,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Multiple Lines</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Multiple Lines</label>
                 <select
                   value={formData['Multiple Lines']}
                   onChange={e => handleInputChange('Multiple Lines', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -346,24 +339,24 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Internet Service</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Internet Service</label>
                 <select
                   value={formData['Internet Service']}
                   onChange={e => handleInputChange('Internet Service', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack font-semibold focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
-                  <option value="Fiber optic">Fiber optic</option>
                   <option value="DSL">DSL</option>
-                  <option value="No">No</option>
+                  <option value="Fiber optic">Fiber optic</option>
+                  <option value="No">No (None)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Online Security</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Online Security</label>
                 <select
                   value={formData['Online Security']}
                   onChange={e => handleInputChange('Online Security', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -372,11 +365,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Online Backup</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Online Backup</label>
                 <select
                   value={formData['Online Backup']}
                   onChange={e => handleInputChange('Online Backup', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -385,11 +378,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Device Protection</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Device Protection</label>
                 <select
                   value={formData['Device Protection']}
                   onChange={e => handleInputChange('Device Protection', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -398,11 +391,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Tech Support</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Tech Support</label>
                 <select
                   value={formData['Tech Support']}
                   onChange={e => handleInputChange('Tech Support', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -411,11 +404,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Streaming TV</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Streaming TV</label>
                 <select
                   value={formData['Streaming TV']}
                   onChange={e => handleInputChange('Streaming TV', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -424,11 +417,11 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Streaming Movies</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Streaming Movies</label>
                 <select
                   value={formData['Streaming Movies']}
                   onChange={e => handleInputChange('Streaming Movies', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="No">No</option>
                   <option value="Yes">Yes</option>
@@ -439,21 +432,21 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           </div>
 
           {/* Section 4: Billing and Payment */}
-          <div className="bg-warmWhite border border-appBorder rounded-lg p-6 space-y-4">
-            <div className="flex items-center gap-2 border-b border-appBorder pb-3">
-              <CreditCard className="w-4 h-4 text-nearBlack" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-nearBlack">
+          <div className="bg-white border border-slate-200/80 rounded-xl p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <CreditCard className="w-4 h-4 text-slate-700" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                 4. Billing and Payment
               </h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Payment Method</label>
+                <label className="block text-slate-600 font-medium mb-1.5">Payment Method</label>
                 <select
                   value={formData['Payment Method']}
                   onChange={e => handleInputChange('Payment Method', e.target.value)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack focus:border-nearBlack outline-none font-medium"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 >
                   <option value="Electronic check">Electronic check</option>
                   <option value="Mailed check">Mailed check</option>
@@ -463,27 +456,31 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Monthly Charges ($)</label>
+                <label className="block text-slate-600 font-medium mb-1.5">
+                  Monthly Charges: <strong className="text-slate-900">${formData['Monthly Charges']}</strong>
+                </label>
                 <input
                   type="number"
-                  step="0.05"
-                  min="18.25"
-                  max="118.75"
+                  step="0.5"
+                  min="18"
+                  max="130"
                   value={formData['Monthly Charges']}
                   onChange={e => handleInputChange('Monthly Charges', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack font-mono focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-mutedText font-medium mb-1.5">Total Charges ($)</label>
+                <label className="block text-slate-600 font-medium mb-1.5">
+                  Total Charges: <strong className="text-slate-900">${formData['Total Charges']}</strong>
+                </label>
                 <input
                   type="number"
-                  step="0.1"
+                  step="1.0"
                   min="0"
-                  value={formData['Total Charges'] ?? 0}
+                  value={formData['Total Charges']}
                   onChange={e => handleInputChange('Total Charges', parseFloat(e.target.value) || 0)}
-                  className="w-full bg-softIvory border border-appBorder rounded px-3 py-2 text-nearBlack font-mono focus:border-nearBlack outline-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-900 focus:border-slate-800 outline-none"
                 />
               </div>
             </div>
@@ -493,17 +490,17 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-accentYellow hover:bg-yellow-400 text-nearBlack font-extrabold text-sm uppercase tracking-wider rounded-md shadow-md transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            className="w-full py-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm transition-all flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-nearBlack border-t-transparent rounded-full animate-spin"></span>
+                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></span>
                 Evaluating Decision Tree Path...
               </span>
             ) : (
               <>
-                <span>ANALYZE CUSTOMER</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>ANALYZE SUBSCRIBER RISK</span>
+                <ArrowRight className="w-4 h-4 text-slate-950" />
               </>
             )}
           </button>
@@ -512,142 +509,131 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
         {/* Prediction Results & Transparent Decision Path */}
         <div className="lg:col-span-5 space-y-6">
           {error && (
-            <div className="p-4 bg-accentRed/10 border border-accentRed/30 rounded-lg text-accentRed text-xs flex items-center gap-2">
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
 
           {!result && !loading && (
-            <div className="bg-softIvory border border-dashed border-appBorder rounded-lg p-10 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-warmWhite border border-appBorder flex items-center justify-center mx-auto text-mutedText">
+            <div className="bg-white border border-dashed border-slate-200 rounded-xl p-10 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
                 <GitCommit className="w-6 h-6" />
               </div>
-              <h4 className="text-sm font-bold text-nearBlack">Ready for Induction Trace</h4>
-              <p className="text-xs text-mutedText max-w-xs mx-auto">
-                Select customer attributes or choose a preset archetype above, then click <strong>ANALYZE CUSTOMER</strong> to trace the exact CART decision path.
+              <h4 className="text-sm font-bold text-slate-800">Ready for Model Underwriting</h4>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+                Configure subscriber attributes or load a preset case above, then click <strong>ANALYZE SUBSCRIBER RISK</strong> to trace the exact CART decision nodes.
               </p>
             </div>
           )}
 
           {result && (
-            <div className="bg-warmWhite border border-appBorder rounded-lg p-6 space-y-6 shadow-sm">
+            <div className="bg-white border border-slate-200/80 rounded-xl p-6 space-y-6 shadow-xs">
               {/* Verdict Header */}
               <div
-                className={`p-5 rounded-lg border flex items-start justify-between ${
+                className={`p-5 rounded-xl border flex items-start justify-between ${
                   result.risk_color === 'red'
-                    ? 'bg-accentRed/10 border-accentRed/30'
+                    ? 'bg-rose-50 border-rose-200 text-rose-900'
                     : result.risk_color === 'yellow'
-                    ? 'bg-accentYellow/20 border-accentYellow/50'
-                    : 'bg-emerald-50 border-emerald-300'
+                    ? 'bg-amber-50 border-amber-200 text-amber-900'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-900'
                 }`}
               >
                 <div>
-                  <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-mutedText">
+                  <span className="text-[10px] font-semibold tracking-wider uppercase opacity-75">
                     Model Classification
                   </span>
-                  <h3
-                    className={`text-2xl font-black tracking-tight ${
-                      result.risk_color === 'red'
-                        ? 'text-accentRed'
-                        : result.risk_color === 'yellow'
-                        ? 'text-yellow-800'
-                        : 'text-emerald-800'
-                    }`}
-                  >
+                  <h3 className="text-2xl font-black tracking-tight mt-0.5">
                     {result.prediction}
                   </h3>
-                  <p className="text-xs text-nearBlack mt-1 font-medium">
+                  <p className="text-xs mt-1 font-medium">
                     Estimated Churn Probability: <strong>{(result.churn_probability * 100).toFixed(1)}%</strong>
                   </p>
                 </div>
 
                 <div className="text-right">
                   <span
-                    className={`inline-block px-3 py-1 text-xs font-mono font-bold uppercase rounded ${
+                    className={`inline-block px-3 py-1 text-xs font-bold uppercase rounded-md ${
                       result.risk_color === 'red'
-                        ? 'bg-accentRed text-warmWhite'
+                        ? 'bg-rose-600 text-white'
                         : result.risk_color === 'yellow'
-                        ? 'bg-accentYellow text-nearBlack'
-                        : 'bg-emerald-700 text-warmWhite'
+                        ? 'bg-amber-400 text-slate-950 font-bold'
+                        : 'bg-emerald-600 text-white'
                     }`}
                   >
                     {result.risk_level}
                   </span>
-                  <div className="text-[10px] font-mono text-mutedText mt-1">
-                    Tree Criterion: {result.model_criterion.toUpperCase()}
+                  <div className="text-[10px] opacity-75 mt-1 font-mono">
+                    Criterion: {result.model_criterion.toUpperCase()}
                   </div>
                 </div>
               </div>
 
-              {/* Product Risk Tier Note */}
-              <div className="bg-softIvory border border-appBorder rounded p-3 text-[11px] text-mutedText leading-relaxed flex items-start gap-2">
-                <Info className="w-4 h-4 text-accentYellow shrink-0 mt-0.5" />
-                <span>
-                  <strong>Product Risk Band:</strong> High (&ge;60%), Moderate (30%-60%), Low (&lt;30%). These are operational thresholds, not guarantees of individual subscriber intent.
+              {/* Key Drivers */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">
+                  Key Identified Drivers
                 </span>
-              </div>
-
-              {/* Exact Tree Path Walkthrough */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between border-b border-appBorder pb-2">
-                  <span className="text-xs font-mono font-bold uppercase tracking-wider text-nearBlack">
-                    Exact CART Decision Path
-                  </span>
-                  <span className="text-[11px] font-mono text-mutedText">
-                    {result.decision_path.length} Nodes Traversed
-                  </span>
-                </div>
-
-                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                  {result.decision_path.map((step, idx) => {
-                    const isLast = step.is_leaf;
-                    return (
-                      <div
-                        key={`path-${idx}`}
-                        className={`p-3 rounded border text-xs transition-all ${
-                          isLast
-                            ? 'bg-softIvory border-nearBlack font-medium'
-                            : 'bg-warmWhite border-appBorder hover:border-accentYellow'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono text-[10px] font-bold text-mutedText">
-                            STEP {idx + 1}: {isLast ? `LEAF #${step.node_id}` : `NODE #${step.node_id}`}
-                          </span>
-                          <span className="font-mono text-[10px] text-mutedText">
-                            Cohort Churn: {(step.churn_probability * 100).toFixed(1)}% ({step.samples} spl)
-                          </span>
-                        </div>
-
-                        <div className="font-semibold text-nearBlack">
-                          {step.rule_condition}
-                        </div>
-
-                        {step.user_value !== null && (
-                          <div className="text-[11px] text-mutedText mt-1">
-                            Subscriber Attribute: <span className="font-mono text-nearBlack font-medium">{String(step.user_value)}</span>
-                          </div>
-                        )}
+                <div className="space-y-1.5">
+                  {result.key_drivers && result.key_drivers.length > 0 ? (
+                    result.key_drivers.map((driver, dIdx) => (
+                      <div key={dIdx} className="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200/60 font-medium">
+                        • {driver}
                       </div>
-                    );
-                  })}
+                    ))
+                  ) : (
+                    <div className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200/60">
+                      Standard contractual profile matching baseline retention criteria.
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Key Decisive Factors */}
-              <div className="border-t border-appBorder pt-4 space-y-2">
-                <span className="text-xs font-mono font-bold uppercase tracking-wider text-nearBlack">
-                  Decisive Decision Rules
-                </span>
-                <ul className="space-y-1.5 text-xs text-mutedText">
-                  {result.key_drivers.map((driver, i) => (
-                    <li key={`driver-${i}`} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accentYellow mt-1.5 shrink-0"></span>
-                      <span className="font-mono text-nearBlack">{driver}</span>
-                    </li>
+              {/* Exact Boolean Path Traversal */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <span className="text-xs font-semibold uppercase text-slate-400 tracking-wider">
+                    Node Traversal Trace
+                  </span>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    Depth: {result.decision_path.length} Levels
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {result.decision_path.map((step, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 bg-slate-50 border border-slate-200/70 rounded-lg text-xs space-y-1 hover:border-slate-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-slate-700">
+                          Step {idx + 1}: Node #{step.node_id}
+                        </span>
+                        <span
+                          className={`font-semibold px-2 py-0.5 rounded text-[10px] ${
+                            step.is_leaf
+                              ? 'bg-slate-900 text-white'
+                              : step.satisfied
+                              ? 'bg-amber-100 text-amber-900'
+                              : 'bg-slate-200 text-slate-800'
+                          }`}
+                        >
+                          {step.is_leaf ? 'Leaf Outcome' : step.satisfied ? 'Condition Met (<=)' : 'Condition False (>)'}
+                        </span>
+                      </div>
+
+                      <div className="font-mono text-slate-800 font-medium">
+                        {step.rule_condition}
+                      </div>
+
+                      <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-200/50">
+                        <span>Impurity: {step.impurity.toFixed(3)}</span>
+                        <span>Node Samples: {step.samples.toLocaleString()}</span>
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             </div>
           )}
