@@ -35,7 +35,7 @@ def startup_event():
     print("[CHURN//ZERO] Initializing data pipeline and baseline Decision Tree...")
     try:
         pipeline.load_and_prepare_data()
-        pipeline.train_model(criterion="gini", max_depth=5, min_samples_leaf=20)
+        pipeline.train_model(criterion="gini", max_depth=4, min_samples_leaf=15)
         print("[CHURN//ZERO] Pipeline ready! Baseline Gini Decision Tree trained successfully.")
     except Exception as e:
         print(f"[CHURN//ZERO] Startup initialization warning: {e}")

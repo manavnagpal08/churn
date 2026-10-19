@@ -134,7 +134,7 @@ export const DecisionTreeViewer: React.FC<DecisionTreeViewerProps> = ({
       <div className="h-14 px-6 border-b border-appBorder bg-warmWhite flex items-center justify-between z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-accentYellow animate-pulse"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-accentYellow"></span>
             <span className="text-xs font-mono font-bold tracking-wider uppercase text-nearBlack">
               Interactive Decision Tree
             </span>

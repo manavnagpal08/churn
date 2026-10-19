@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { CustomerInput, PredictionResult } from '../types';
 import { predictSingleCustomer } from '../services/api';
 import {
-  Sparkles,
   ArrowRight,
   ShieldAlert,
   ShieldCheck,
@@ -154,14 +153,14 @@ export const PredictionStudio: React.FC<PredictionStudioProps> = ({ onInspectNod
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-appBorder pb-6">
         <div>
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-accentYellow bg-nearBlack px-2 py-0.5 rounded">
-            Interactive Prediction Studio
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-nearBlack bg-softIvory border border-appBorder px-2.5 py-1 rounded">
+            Underwriting &amp; Inference Terminal
           </span>
-          <h1 className="text-3xl font-extrabold text-nearBlack tracking-tight mt-2">
-            Simulate Subscriber Scenarios
+          <h1 className="text-2xl sm:text-3xl font-black text-nearBlack tracking-tight mt-2">
+            Subscriber Risk Evaluation
           </h1>
-          <p className="text-sm text-mutedText mt-1">
-            Input verified customer parameters to trace their exact evaluation through the fitted Decision Tree.
+          <p className="text-xs sm:text-sm text-mutedText mt-1">
+            Input verified account parameters to audit the customer's exact path through the CART decision tree.
           </p>
         </div>
 

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
+import { LandingHero } from './pages/LandingHero';
 import { CommandCenter } from './pages/CommandCenter';
 import { PredictionStudio } from './pages/PredictionStudio';
 import { TreeObservatory } from './pages/TreeObservatory';
 import { PatternIntelligence } from './pages/PatternIntelligence';
 import { ModelEvaluationLab } from './pages/ModelEvaluationLab';
 import { CustomerPortfolio } from './pages/CustomerPortfolio';
-import { MethodologyPage } from './pages/MethodologyPage';
 
 import {
   fetchAppStatus,
@@ -23,7 +23,7 @@ import {
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>('command-center');
+  const [activeTab, setActiveTab] = useState<string>('landing');
   const [status, setStatus] = useState<AppStatus | null>(null);
   const [analytics, setAnalytics] = useState<EdaAnalytics | null>(null);
   const [evaluation, setEvaluation] = useState<ModelEvaluation | null>(null);
@@ -122,6 +122,14 @@ export const App: React.FC = () => {
 
         {!loading && !error && (
           <>
+            {activeTab === 'landing' && (
+              <LandingHero
+                onEnterApp={(tab) => setActiveTab(tab || 'command-center')}
+                status={status}
+                analytics={analytics}
+              />
+            )}
+
             {activeTab === 'command-center' && (
               <CommandCenter
                 analytics={analytics}
@@ -157,10 +165,6 @@ export const App: React.FC = () => {
 
             {activeTab === 'customer-portfolio' && (
               <CustomerPortfolio />
-            )}
-
-            {activeTab === 'methodology' && (
-              <MethodologyPage />
             )}
           </>
         )}

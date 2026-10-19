@@ -63,8 +63,8 @@ class ChurnMLPipeline:
         # Current active config
         self.current_config = {
             "criterion": "gini",
-            "max_depth": 5,
-            "min_samples_leaf": 20,
+            "max_depth": 4,
+            "min_samples_leaf": 15,
             "ccp_alpha": 0.0
         }
         
@@ -139,8 +139,8 @@ class ChurnMLPipeline:
         print(f"[Pipeline] Data loaded: {len(df)} rows. Train: {len(self.X_train)}, Test: {len(self.X_test)}. Preprocessed features: {len(self.feature_names_out)}")
         return self.df_clean
 
-    def train_model(self, criterion: str = "gini", max_depth: Optional[int] = 5,
-                    min_samples_leaf: int = 20, ccp_alpha: float = 0.0) -> Dict[str, Any]:
+    def train_model(self, criterion: str = "gini", max_depth: Optional[int] = 4,
+                    min_samples_leaf: int = 15, ccp_alpha: float = 0.0) -> Dict[str, Any]:
         if self.df_clean is None:
             self.load_and_prepare_data()
             

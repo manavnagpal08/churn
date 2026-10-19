@@ -39,13 +39,13 @@ export const PatternIntelligence: React.FC<PatternIntelligenceProps> = ({ analyt
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-appBorder pb-6">
         <div>
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-accentYellow bg-nearBlack px-2 py-0.5 rounded">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-nearBlack bg-softIvory border border-appBorder px-2.5 py-1 rounded">
             Exploratory Data Mining
           </span>
-          <h1 className="text-3xl font-extrabold text-nearBlack tracking-tight mt-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-nearBlack tracking-tight mt-2">
             Historical Pattern Intelligence
           </h1>
-          <p className="text-sm text-mutedText mt-1">
+          <p className="text-xs sm:text-sm text-mutedText mt-1">
             Empirical subscriber trends and impurity-based split importance derived from Telco historical records.
           </p>
         </div>

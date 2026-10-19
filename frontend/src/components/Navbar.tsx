@@ -10,16 +10,16 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, status }) => {
   const navItems = [
-    { id: 'command-center', label: 'Command Center', icon: LayoutDashboard },
+    { id: 'landing', label: 'Home', icon: LayoutDashboard },
+    { id: 'command-center', label: 'Command Center', icon: BarChart3 },
     { id: 'prediction-studio', label: 'Prediction Studio', icon: UserCheck },
     { id: 'tree-observatory', label: 'Tree Observatory', icon: GitFork },
     { id: 'pattern-intelligence', label: 'Pattern Intelligence', icon: BarChart3 },
     { id: 'model-evaluation', label: 'Evaluation Lab', icon: FlaskConical },
     { id: 'customer-portfolio', label: 'Customer Portfolio', icon: Users },
-    { id: 'methodology', label: 'Methodology', icon: BookOpen },
   ];
 
-  const accuracyPct = status?.status?.accuracy ? (status.status.accuracy * 100).toFixed(1) : '79.4';
+  const accuracyPct = status?.status?.accuracy ? (status.status.accuracy * 100).toFixed(2) : '79.91';
   const criterionLabel = status?.config?.criterion?.toUpperCase() || 'GINI';
 
   return (
@@ -27,30 +27,30 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, status 
       {/* Top Brand Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Wordmark */}
-        <div className="flex items-center gap-4 cursor-pointer" onClick={() => setActiveTab('command-center')}>
+        <div className="flex items-center gap-4 cursor-pointer" onClick={() => setActiveTab('landing')}>
           <div className="flex items-center tracking-tight">
-            <span className="text-xl font-extrabold tracking-tighter text-nearBlack">CHURN</span>
+            <span className="text-xl font-black tracking-tight text-nearBlack">CHURN</span>
             <span className="text-xl font-mono font-bold text-accentRed mx-0.5">//</span>
-            <span className="text-xl font-mono font-bold text-accentYellow bg-nearBlack px-1.5 py-0.5 rounded text-warmWhite">ZERO</span>
+            <span className="text-xl font-mono font-black text-nearBlack bg-accentYellow px-1.5 py-0.5 rounded">ZERO</span>
           </div>
           <div className="hidden md:block h-4 w-px bg-appBorder"></div>
-          <p className="hidden md:block text-[11px] font-mono tracking-wide text-mutedText uppercase">
+          <p className="hidden md:block text-[11px] font-mono tracking-wide text-mutedText uppercase font-semibold">
             Understand the risk. Decode the decision. Retain the customer.
           </p>
         </div>
 
-        {/* Live Model Badge */}
+        {/* Live Model Telemetry */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-2 bg-softIvory border border-appBorder px-3 py-1.5 rounded-md text-xs font-mono">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-mutedText">CART Model:</span>
-            <span className="font-bold text-nearBlack">{criterionLabel}</span>
+          <div className="hidden sm:flex items-center gap-2 bg-softIvory border border-appBorder px-3 py-1.5 rounded text-xs font-mono">
+            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+            <span className="text-mutedText">Model:</span>
+            <span className="font-bold text-nearBlack">CART ({criterionLabel})</span>
             <span className="text-appBorder">|</span>
-            <span className="text-mutedText">Test Acc:</span>
+            <span className="text-mutedText">Accuracy:</span>
             <span className="font-bold text-nearBlack">{accuracyPct}%</span>
           </div>
 
-          <div className="text-[11px] font-mono font-medium px-2.5 py-1 bg-nearBlack text-warmWhite rounded">
+          <div className="text-[11px] font-mono font-bold px-2.5 py-1 bg-nearBlack text-warmWhite rounded">
             TELCO 7,043
           </div>
         </div>

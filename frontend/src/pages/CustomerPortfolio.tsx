@@ -99,14 +99,14 @@ export const CustomerPortfolio: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-appBorder pb-6">
         <div>
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-accentYellow bg-nearBlack px-2 py-0.5 rounded">
-            Subscriber Ledger
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-nearBlack bg-softIvory border border-appBorder px-2.5 py-1 rounded">
+            Subscriber Ledger &amp; Records
           </span>
-          <h1 className="text-3xl font-extrabold text-nearBlack tracking-tight mt-2">
-            Customer Portfolio & Batch Inference
+          <h1 className="text-2xl sm:text-3xl font-black text-nearBlack tracking-tight mt-2">
+            Customer Portfolio &amp; Batch Inference
           </h1>
-          <p className="text-sm text-mutedText mt-1">
-            Explore 7,043 actual Telco customer profiles or upload a candidate cohort for automated Decision Tree scoring.
+          <p className="text-xs sm:text-sm text-mutedText mt-1">
+            Audit 7,043 actual Telco customer profiles or upload a candidate cohort for automated Decision Tree scoring.
           </p>
         </div>
 

@@ -11,8 +11,7 @@ import {
   Layers,
   ArrowRight,
   BookOpen,
-  Scale,
-  Sparkles
+  Scale
 } from 'lucide-react';
 
 interface TreeObservatoryProps {
@@ -93,14 +92,14 @@ export const TreeObservatory: React.FC<TreeObservatoryProps> = ({ initialTree, o
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-appBorder pb-6">
         <div>
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-accentYellow bg-nearBlack px-2 py-0.5 rounded">
+          <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-nearBlack bg-softIvory border border-appBorder px-2.5 py-1 rounded">
             CART Induction Visualizer
           </span>
-          <h1 className="text-3xl font-extrabold text-nearBlack tracking-tight mt-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-nearBlack tracking-tight mt-2">
             Decision Tree Observatory
           </h1>
-          <p className="text-sm text-mutedText mt-1">
-            Explore every node, purity partition, and rule boundary dynamically fitted on training data.
+          <p className="text-xs sm:text-sm text-mutedText mt-1">
+            Audit every node, purity partition, and rule boundary dynamically fitted on training data.
           </p>
         </div>
 
